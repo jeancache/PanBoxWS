@@ -22,10 +22,14 @@ public class Product implements Serializable {
     private int id;
     @XmlElement(required=true)
     private String name;
-    @XmlElement(required=true)
+    @XmlElement
     private String description;
     @XmlElement(required=true)
     private double price;
+    @XmlElement
+    private int qty;
+    @XmlElement
+    private int empid;
 
     public Product() {
     }
@@ -66,6 +70,22 @@ public class Product implements Serializable {
 
     public void setPrice(double price) {
         this.price = price;
+    }
+
+    public int getQty() {
+        return qty;
+    }
+
+    public void setQty(int qty) {
+        this.qty = qty;
+    }
+
+    public int getEmpid() {
+        return empid;
+    }
+
+    public void setEmpid(int empid) {
+        this.empid = empid;
     }
     
     

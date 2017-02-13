@@ -32,6 +32,7 @@ public class ApplicationConfig extends Application {
         //resources.add(com.cofmat.cofmatsvr.JsonMoxyConfigurationContextResolver.class);
         resources.add(com.cofmat.cofmatsvr.CofMatService.class);
         resources.add(com.cofmat.cofmatsvr.JsonMoxyConfigurationContextResolver.class);
+        resources.add(com.cofmat.cofmatsvr.TestOrders.class);
     }
     
 }

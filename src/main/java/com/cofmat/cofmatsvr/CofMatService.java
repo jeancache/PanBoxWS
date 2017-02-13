@@ -91,6 +91,45 @@ public class CofMatService {
             return u;
         }
     }
+    
+    @GET
+    @Path("/orders")
+    @Produces(MediaType.APPLICATION_JSON)
+    public ArrayList<Order> orders() {
+        ArrayList<Order> orderList = new ArrayList<>();
+        try{
+            con = DriverManager.getConnection("jdbc:mysql://localhost:3306/cofmat", "root", "");
+            PreparedStatement ps = con.prepareStatement("SELECT ordid FROM orders WHERE status = ?");
+            ps.setString(1, "unpaid");
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                Order o = new Order(rs.getInt("ordid"));
+                ArrayList<Product> prodList = new ArrayList<>();
+                PreparedStatement prodquery = con.prepareStatement("SELECT a.prodid, a.prodname, a.price, b.qty, empid FROM products a JOIN ordprod b ON a.prodid = b.productid JOIN orders c ON c.ordid = b.ordid WHERE c.ordid = ?");
+                prodquery.setInt(1, rs.getInt("ordid"));
+                ResultSet orderset = prodquery.executeQuery();
+                while(orderset.next()) {
+                    Product p = new Product();
+                    p.setId(orderset.getInt("prodid"));
+                    p.setName(orderset.getString("prodname"));
+                    p.setPrice(orderset.getInt("price") + 0.0);
+                    p.setQty(orderset.getInt("qty"));
+                    p.setEmpid(orderset.getInt("empid"));
+                    prodList.add(p);
+                }
+                o.setProdlist(prodList);
+                orderList.add(o);
+                prodquery.close();
+                orderset.close();
+            }
+            ps.close();
+            rs.close();
+            return orderList;
+        } catch (Exception e) {
+            System.out.println("Exception: " + e);
+            return orderList;
+        }
+    }
 
     /**
      * PUT method for updating or creating an instance of CofMatService
