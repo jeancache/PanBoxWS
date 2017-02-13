@@ -1,3 +1,3 @@
 # Webservice
-may error yung sa method ng order
-naka isolate muna sa TestOrders.java
+ok na yung sa pag get ng unpaid orders
+ayusin ko bukas yung sa pag total nung amount nung orders

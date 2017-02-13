@@ -44,17 +44,15 @@ public class TestOrders {
     @GET
     @Path("/orders")
     @Produces(MediaType.APPLICATION_JSON)
-    public ArrayList<String> orders() {
-        ArrayList<String> orderList = new ArrayList<>();
+    public ArrayList<Order> orders() {
+        ArrayList<Order> orderList = new ArrayList<>();
         try{
             con = DriverManager.getConnection("jdbc:mysql://localhost:3306/cofmat", "root", "");
             PreparedStatement ps = con.prepareStatement("SELECT ordid FROM orders WHERE status = ?");
             ps.setString(1, "unpaid");
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
-                String s = "" + rs.getInt("ordid");
-                System.out.println(s);
-                orderList.add(s);/*
+                orderList.add(new Order(rs.getInt("ordid")));/*
                 Order o = new Order(rs.getInt("ordid"));
                 ArrayList<Product> prodList = new ArrayList<>();
                 PreparedStatement prodquery = con.prepareStatement("SELECT a.prodid, a.prodname, a.price, b.qty, empid FROM products a JOIN ordprod b ON a.prodid = b.productid JOIN orders c ON c.ordid = b.ordid WHERE c.ordid = ?");
@@ -82,6 +80,27 @@ public class TestOrders {
             //return orderList;
         }
         return orderList;
+    }
+    
+    @GET
+    @Path("/products")
+    @Produces(MediaType.APPLICATION_JSON)
+    public ArrayList<Order> productList() {
+        ArrayList<Order> list = new ArrayList<>();
+        try {
+            con = DriverManager.getConnection("jdbc:mysql://localhost:3306/cofmat", "root", "");
+            PreparedStatement ps = con.prepareStatement("SELECT * FROM orders");
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                //Product p = new Product(rs.getString("prodname"), rs.getString("proddesc"), rs.getInt("price") + 0.0);
+                Order o = new Order(rs.getInt("ordid"));
+                //p.setId(rs.getInt("prodid"));
+                list.add(o);
+            }
+        } catch (Exception e) {
+            System.out.println("Exception: " + e);
+        }
+        return list;
     }
 
     /**

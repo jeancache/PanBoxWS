@@ -21,10 +21,14 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class Order implements Serializable {
     @XmlElement(required=true)
     private int id;
-    @XmlElement(required=true)
+    @XmlElement
     private ArrayList<Product> prodlist;
-    @XmlElement(required=true)
+    @XmlElement
     private double total;
+    
+    public Order() {
+        
+    }
 
     public Order(int id) {
         this.id = id;
