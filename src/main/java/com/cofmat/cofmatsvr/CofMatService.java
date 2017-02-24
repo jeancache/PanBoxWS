@@ -10,6 +10,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
@@ -20,6 +21,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PUT;
+import javax.ws.rs.core.Configuration;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -32,7 +34,7 @@ import javax.ws.rs.core.Response;
 public class CofMatService {
 
     @Context
-    private UriInfo context;
+    private Configuration context;
     private Connection con;
 
     /**
@@ -50,9 +52,10 @@ public class CofMatService {
     @Produces(MediaType.APPLICATION_JSON)
     public ArrayList<Product> productList() {
         ArrayList<Product> list = new ArrayList<>();
+        Connection conn = (Connection) context.getProperty("conn");
         try {
-            con = DriverManager.getConnection("jdbc:mysql://localhost:3306/cofmat", "root", "");
-            PreparedStatement ps = con.prepareStatement("SELECT * FROM products");
+            //con = DriverManager.getConnection("jdbc:mysql://localhost:3306/cofmat", "root", "");
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM products");
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
                 Product p = new Product(rs.getString("prodname"), rs.getString("proddesc"), rs.getInt("price") + 0.0);

@@ -5,6 +5,9 @@
  */
 package com.cofmat.cofmatsvr;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.util.Map;
 import java.util.Set;
 import javax.ws.rs.core.Application;
 import org.eclipse.persistence.jaxb.rs.MOXyJsonProvider;
@@ -22,6 +25,25 @@ public class ApplicationConfig extends Application {
         addRestResourceClasses(resources);
         return resources;
     }
+
+    @Override
+    public Map<String, Object> getProperties() {
+        Map<String, Object> properties = new java.util.HashMap<>();
+        addRestProperties(properties);
+        return properties;
+    }
+    
+    private void addRestProperties(Map<String, Object> properties) {
+        try {
+            Class.forName("com.mysql.jdbc.Driver");
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/cofmat", "root", "");
+            properties.put("conn", conn);
+        } catch (Exception e) {
+            System.out.println("Exception: " + e);
+        }
+    }
+    
+    
     /**
      * Do not modify addRestResourceClasses() method.
      * It is automatically populated with
