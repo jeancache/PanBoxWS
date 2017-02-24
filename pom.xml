@@ -3,11 +3,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.cofmat</groupId>
-    <artifactId>CofMatSVR</artifactId>
+    <artifactId>PanBox</artifactId>
     <version>1.0</version>
     <packaging>war</packaging>
 
-    <name>CofMatSVR</name>
+    <name>PanBox</name>
 
     <properties>
         <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>

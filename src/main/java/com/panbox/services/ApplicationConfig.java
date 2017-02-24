@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.cofmat.cofmatsvr;
+package com.panbox.services;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -52,9 +52,9 @@ public class ApplicationConfig extends Application {
      */
     private void addRestResourceClasses(Set<Class<?>> resources) {
         //resources.add(com.cofmat.cofmatsvr.JsonMoxyConfigurationContextResolver.class);
-        resources.add(com.cofmat.cofmatsvr.CofMatService.class);
-        resources.add(com.cofmat.cofmatsvr.JsonMoxyConfigurationContextResolver.class);
-        resources.add(com.cofmat.cofmatsvr.TestOrders.class);
+        resources.add(com.panbox.services.CofMatService.class);
+        resources.add(com.panbox.services.JsonMoxyConfigurationContextResolver.class);
+        resources.add(com.panbox.services.TestOrders.class);
     }
     
 }

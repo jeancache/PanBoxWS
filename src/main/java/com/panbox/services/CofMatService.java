@@ -3,8 +3,11 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.cofmat.cofmatsvr;
+package com.panbox.services;
 
+import com.panbox.beans.Product;
+import com.panbox.beans.Order;
+import com.panbox.beans.User;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -30,7 +33,7 @@ import javax.ws.rs.core.Response;
  *
  * @author gina PC
  */
-@Path("cofmat")
+@Path("panbox")
 public class CofMatService {
 
     @Context
