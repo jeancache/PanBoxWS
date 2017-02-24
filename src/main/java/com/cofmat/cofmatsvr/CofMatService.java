@@ -21,6 +21,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PUT;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 /**
  * REST Web Service
@@ -130,13 +131,27 @@ public class CofMatService {
             return orderList;
         }
     }
+    
+    @POST
+    @Path("/adduser")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+    public User addUser(User u) {
+        System.out.println(u.getName());
+        System.out.println(u.getPassword());
+        //return Response.status(200).entity("User accepted").build();
+        u.setName(u.getName() + "ver");
+        return u;
+    }
 
     /**
      * PUT method for updating or creating an instance of CofMatService
      * @param content representation for the resource
      */
-    @PUT
-    @Consumes(MediaType.APPLICATION_XML)
-    public void putXml(User content) {
+    @GET
+    @Path("/test")
+    @Produces(MediaType.APPLICATION_JSON)
+    public User putXml() {
+        return new User("With", "root");
     }
 }
