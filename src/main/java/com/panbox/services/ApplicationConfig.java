@@ -5,12 +5,8 @@
  */
 package com.panbox.services;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.util.Map;
 import java.util.Set;
 import javax.ws.rs.core.Application;
-import org.eclipse.persistence.jaxb.rs.MOXyJsonProvider;
 
 /**
  *
@@ -26,7 +22,7 @@ public class ApplicationConfig extends Application {
         return resources;
     }
 
-    @Override
+    /*@Override
     public Map<String, Object> getProperties() {
         Map<String, Object> properties = new java.util.HashMap<>();
         addRestProperties(properties);
@@ -41,7 +37,7 @@ public class ApplicationConfig extends Application {
         } catch (Exception e) {
             System.out.println("Exception: " + e);
         }
-    }
+    }*/
     
     
     /**

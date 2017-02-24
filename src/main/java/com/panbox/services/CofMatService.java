@@ -37,7 +37,7 @@ import javax.ws.rs.core.Response;
 public class CofMatService {
 
     @Context
-    private Configuration context;
+    private ServletContext context;
     private Connection con;
 
     /**
@@ -55,7 +55,8 @@ public class CofMatService {
     @Produces(MediaType.APPLICATION_JSON)
     public ArrayList<Product> productList() {
         ArrayList<Product> list = new ArrayList<>();
-        Connection conn = (Connection) context.getProperty("conn");
+        //Connection conn = (Connection) context.getProperty("conn");
+        Connection conn = (Connection) context.getAttribute("conn");
         try {
             //con = DriverManager.getConnection("jdbc:mysql://localhost:3306/cofmat", "root", "");
             PreparedStatement ps = conn.prepareStatement("SELECT * FROM products");
