@@ -18,19 +18,19 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement(name="user")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class User implements Serializable {
-    @XmlElement(required=true)
+    @XmlElement
     private int id;
-    @XmlElement(required=true)
+    @XmlElement
     private String name;
-    @XmlElement(required=true)
+    @XmlElement
     private String password;
-    @XmlElement(required=true)
+    @XmlElement
     private boolean admin;
-    @XmlElement(required=true)
+    @XmlElement
     private boolean barista;
-    @XmlElement(required=true)
+    @XmlElement
     private boolean cashier;
-    @XmlElement(required=true)
+    @XmlElement
     private boolean cook;
 
     public User() {

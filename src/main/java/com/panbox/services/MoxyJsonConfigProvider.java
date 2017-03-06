@@ -17,11 +17,10 @@ import org.glassfish.jersey.moxy.json.MoxyJsonConfig;
  * @author gina PC
  */
 @Provider
-public class JsonMoxyConfigurationContextResolver implements ContextResolver<MoxyJsonConfig> {
-    
+public class MoxyJsonConfigProvider implements ContextResolver<MoxyJsonConfig> {
     private final MoxyJsonConfig config;
 
-    public JsonMoxyConfigurationContextResolver() {
+    public MoxyJsonConfigProvider() {
         final Map<String, String> namespacePrefixMapper = new HashMap<>();
         namespacePrefixMapper.put("http://www.w3.org/2001/XMLSchema-instance", "xsi");
  

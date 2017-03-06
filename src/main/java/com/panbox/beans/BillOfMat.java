@@ -6,7 +6,6 @@
 package com.panbox.beans;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.HashMap;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -17,22 +16,21 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author gina PC
  */
-@XmlRootElement(name="order")
+@XmlRootElement(name="bill")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class Order implements Serializable {
-    @XmlElement(required=true)
+public class BillOfMat implements Serializable {
+    @XmlElement
     private int id;
     @XmlElement
-    private HashMap<String, Integer> prodlist;
-    @XmlElement
-    private double total;
-    
-    public Order() {
-        
+    private HashMap<String, Integer> materials;
+
+    public BillOfMat() {
+        materials = new HashMap<>();
     }
 
-    public Order(int id) {
+    public BillOfMat(int id) {
         this.id = id;
+        materials = new HashMap<>();
     }
 
     public int getId() {
@@ -43,20 +41,12 @@ public class Order implements Serializable {
         this.id = id;
     }
 
-    public double getTotal() {
-        return total;
+    public HashMap<String, Integer> getMaterials() {
+        return materials;
     }
 
-    public void setTotal(double total) {
-        this.total = total;
-    }
-
-    public HashMap<String, Integer> getProdlist() {
-        return prodlist;
-    }
-
-    public void setProdlist(HashMap<String, Integer> prodlist) {
-        this.prodlist = prodlist;
+    public void setMaterials(HashMap<String, Integer> materials) {
+        this.materials = materials;
     }
     
     

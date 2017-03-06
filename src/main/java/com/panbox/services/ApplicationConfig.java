@@ -21,6 +21,17 @@ public class ApplicationConfig extends Application {
         addRestResourceClasses(resources);
         return resources;
     }
+    
+    /*
+    @Override
+    public Set<Object> getSingletons() {
+        Set<Object> set = new java.util.HashSet<>();
+        set.add(com.panbox.services.PanBoxObjectMapperProvider.class);
+        set.add(JacksonFeature.class);
+        return set;
+    }*/
+    
+    
 
     /*@Override
     public Map<String, Object> getProperties() {
@@ -47,9 +58,8 @@ public class ApplicationConfig extends Application {
      * If required, comment out calling this method in getClasses().
      */
     private void addRestResourceClasses(Set<Class<?>> resources) {
-        //resources.add(com.cofmat.cofmatsvr.JsonMoxyConfigurationContextResolver.class);
-        resources.add(com.panbox.services.CofMatService.class);
-        resources.add(com.panbox.services.JsonMoxyConfigurationContextResolver.class);
+        resources.add(com.panbox.services.MoxyJsonConfigProvider.class);
+        resources.add(com.panbox.services.PanBoxService.class);
         resources.add(com.panbox.services.TestOrders.class);
     }
     
