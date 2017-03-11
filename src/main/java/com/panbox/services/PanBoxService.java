@@ -8,14 +8,20 @@ package com.panbox.services;
 import com.panbox.beans.BillOfMat;
 import com.panbox.beans.Product;
 import com.panbox.beans.Order;
+import com.panbox.beans.ProductList;
 import com.panbox.beans.Stock;
 import com.panbox.beans.User;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Context;
@@ -58,16 +64,21 @@ public class PanBoxService {
     @GET
     @Path("/products")
     @Produces(MediaType.APPLICATION_JSON)
-    public ArrayList<Product> productList() {
+    public ProductList productList() {
+        ProductList pl = new ProductList();
         ArrayList<Product> list = new ArrayList<>();
         //Connection conn = (Connection) context.getProperty("conn");
-        Connection conn = (Connection) context.getAttribute("conn");
+        //Connection conn = (Connection) context.getAttribute("conn");
         try {
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/panbox", "root", "");
             //con = DriverManager.getConnection("jdbc:mysql://localhost:3306/cofmat", "root", "");
             PreparedStatement ps = conn.prepareStatement("SELECT * FROM products");
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
-                Product p = new Product(rs.getString("prodname"), rs.getString("proddesc"), rs.getInt("price") + 0.0);
+                //Product p = new Product(rs.getString("prodname"), rs.getString("proddesc"), rs.getInt("price") + 0.0);
+                Product p = new Product();
+                p.setPrice(rs.getInt("price") + 0.0);
+                p.setName(rs.getString("prodname"));
                 p.setId(rs.getInt("prodid"));
                 list.add(p);
             }
@@ -75,7 +86,8 @@ public class PanBoxService {
             System.out.println("Exception: " + e);
             e.printStackTrace();
         }
-        return list;
+        pl.setList(list);
+        return pl;
     }
     
     @GET
@@ -135,7 +147,8 @@ public class PanBoxService {
     public ArrayList<Order> orders(@PathParam("status") String stat) {
         ArrayList<Order> orderList = new ArrayList<>();
         try{
-            con = DriverManager.getConnection("jdbc:mysql://localhost:3306/cofmat", "root", "");
+            Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/panbox", "root", "");
+            //con = DriverManager.getConnection("jdbc:mysql://localhost:3306/cofmat", "root", "");
             PreparedStatement ps = con.prepareStatement("SELECT ordid FROM orders WHERE status = ?");
             ps.setString(1, stat);
             ResultSet rs = ps.executeQuery();
@@ -143,7 +156,7 @@ public class PanBoxService {
                 Order o = new Order(rs.getInt("ordid"));
                 //ArrayList<Product> prodList = new ArrayList<>();
                 HashMap<String, Integer> hm = new HashMap<>();
-                PreparedStatement prodquery = con.prepareStatement("SELECT a.prodid, a.prodname, a.price, b.qty, empid FROM products a JOIN ordprod b ON a.prodid = b.productid JOIN orders c ON c.ordid = b.ordid WHERE c.ordid = ?");
+                PreparedStatement prodquery = con.prepareStatement("SELECT a.prodid, a.prodname, a.price, b.qty FROM products a JOIN ordprod b ON a.prodid = b.prdid JOIN orders c ON c.ordid = b.orid WHERE c.ordid = ?");
                 prodquery.setInt(1, rs.getInt("ordid"));
                 ResultSet orderset = prodquery.executeQuery();
                 while(orderset.next()) {
@@ -221,5 +234,91 @@ public class PanBoxService {
         //hm.put("Test", "2");
         return new User("test", "user");
         //return hm;
+    }
+    
+    @GET
+    @Path("/ordertest")
+    @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+    public Order orderTest() {
+        HashMap<String, Integer> hm = new HashMap<>();
+        Order o = new Order();
+        hm.put("Pie", 2);
+        hm.put("Sandwich", 3);
+        o.setProdlist(hm);
+        return o;
+    }
+    
+    @POST
+    @Path("/sendorder")
+    @Consumes({MediaType.APPLICATION_JSON})
+    public Response acceptOrder(Order o) {
+        //Connection conn = (Connection) context.getAttribute("conn");
+        HashMap<String, Integer> hm = o.getProdlist();
+        Iterator<String> itr = hm.keySet().iterator();
+        Date currentDate = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String current = sdf.format(currentDate);
+        try {
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/panbox", "root", "");
+            //Insert Order
+            PreparedStatement ordQuery = conn.prepareStatement("INSERT INTO orders (total, status, date) VALUES (?,?,?)");
+            ordQuery.setDouble(1, o.getTotal());
+            ordQuery.setString(2, "unpaid");
+            ordQuery.setString(3, current);
+            ordQuery.executeUpdate();
+            
+            //get order id
+            int orderId = getOrdId(o.getTotal(), "unpaid", current);
+            
+            while(itr.hasNext()) {
+                String currentProd = itr.next();
+                int itemId = getProdId(currentProd);
+                PreparedStatement itemQuery = conn.prepareStatement("INSERT INTO ordprod (prdid, orid, qty) VALUES (?,?,?)");
+                itemQuery.setInt(1, itemId);
+                itemQuery.setInt(2, orderId);
+                itemQuery.setInt(3, hm.get(currentProd));
+                itemQuery.executeUpdate();
+            }
+        } catch (Exception e) {
+            System.out.println("Exception:[acceptOrder]" + e);
+        }
+        return Response.status(200).entity("Order accepted").build();
+    }
+    
+    private int getProdId(String s) {
+        int id = -1;
+        //Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/panbox", "root", "");
+            PreparedStatement idQuery = conn.prepareStatement("SELECT prodid FROM products WHERE prodname = ?");
+            idQuery.setString(1, s);
+            ResultSet idRes = idQuery.executeQuery();
+            if(idRes.first()) {
+                id = idRes.getInt("prodid");
+            }
+        } catch (Exception e) {
+            System.out.println("Exception:[getProdId] " +e);
+        }
+        return id;
+    }
+    
+    private int getOrdId(double total, String status, String date) {
+        int id = -1;
+        //Connection conn = (Connection) context.getAttribute("conn");
+        
+        try {
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/panbox", "root", "");
+            PreparedStatement idQuery = conn.prepareStatement("SELECT ordid FROM orders WHERE total = ? AND status = ? AND date = ?");
+            idQuery.setDouble(1, total);
+            idQuery.setString(2, status);
+            idQuery.setString(3, date);
+            ResultSet idRes = idQuery.executeQuery();
+            if(idRes.first()) {
+                id = idRes.getInt("ordid");
+            }
+        } catch (Exception e) {
+            System.out.println("Exception:[getOrdId] " +e);
+        }
+        return id;
     }
 }
