@@ -8,10 +8,14 @@ package com.panbox.beans;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+import org.eclipse.persistence.oxm.annotations.XmlPath;
 
 /**
  *
@@ -20,12 +24,19 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement(name="order")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class Order implements Serializable {
+    //@XmlElement
+    @XmlPath(".")
+    @XmlJavaTypeAdapter(OrderAdapter.class)
+    private Map<String, Integer> prodlist = new HashMap<String, Integer>();
     @XmlElement(required=true)
+    //@XmlTransient
     private int id;
     @XmlElement
-    private HashMap<String, Integer> prodlist;
-    @XmlElement
+    //@XmlTransient
     private double total;
+    
+    @XmlElement
+    private int tablenum;
     
     public Order() {
         
@@ -51,12 +62,20 @@ public class Order implements Serializable {
         this.total = total;
     }
 
-    public HashMap<String, Integer> getProdlist() {
+    public Map<String, Integer> getProdlist() {
         return prodlist;
     }
 
-    public void setProdlist(HashMap<String, Integer> prodlist) {
+    public void setProdlist(Map<String, Integer> prodlist) {
         this.prodlist = prodlist;
+    }
+
+    public int getTablenum() {
+        return tablenum;
+    }
+
+    public void setTablenum(int tablenum) {
+        this.tablenum = tablenum;
     }
     
     

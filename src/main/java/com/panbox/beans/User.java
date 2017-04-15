@@ -25,13 +25,13 @@ public class User implements Serializable {
     @XmlElement
     private String password;
     @XmlElement
-    private boolean admin;
+    private String position;
     @XmlElement
-    private boolean barista;
+    private String address;
     @XmlElement
-    private boolean cashier;
+    private String dateHired;
     @XmlElement
-    private boolean cook;
+    private int contacts;
 
     public User() {
     }
@@ -65,37 +65,36 @@ public class User implements Serializable {
         this.password = password;
     }
 
-    public boolean isAdmin() {
-        return admin;
+    public String getPosition() {
+        return position;
     }
 
-    public void setAdmin(boolean admin) {
-        this.admin = admin;
+    public void setPosition(String position) {
+        this.position = position;
     }
 
-    public boolean isBarista() {
-        return barista;
+    public String getAddress() {
+        return address;
     }
 
-    public void setBarista(boolean barista) {
-        this.barista = barista;
+    public void setAddress(String address) {
+        this.address = address;
     }
 
-    public boolean isCashier() {
-        return cashier;
+    public String getDateHired() {
+        return dateHired;
     }
 
-    public void setCashier(boolean cashier) {
-        this.cashier = cashier;
+    public void setDateHired(String dateHired) {
+        this.dateHired = dateHired;
     }
 
-    public boolean isCook() {
-        return cook;
+    public int getContacts() {
+        return contacts;
     }
 
-    public void setCook(boolean cook) {
-        this.cook = cook;
+    public void setContacts(int contacts) {
+        this.contacts = contacts;
     }
-    
     
 }

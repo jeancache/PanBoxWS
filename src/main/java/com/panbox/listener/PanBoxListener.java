@@ -24,7 +24,7 @@ public class PanBoxListener implements ServletContextListener {
         try {
             ServletContext context = sce.getServletContext();
             Class.forName("com.mysql.jdbc.Driver");
-            conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/cofmat", "root", "");
+            conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/panbox", "root", "");
             context.setAttribute("conn", conn);
         } catch (Exception e) {
             System.out.println("Exception: " + e);
