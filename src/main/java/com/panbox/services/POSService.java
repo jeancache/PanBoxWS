@@ -582,9 +582,8 @@ public class POSService {
         ArrayList<Order> list = new ArrayList<>();
         Connection conn = (Connection) context.getAttribute("conn");
         try{
-            PreparedStatement ps = conn.prepareStatement("SELECT ordid, tablenum FROM orders WHERE DATE(date) = ? AND status = ?");
+            PreparedStatement ps = conn.prepareStatement("SELECT ordid, tablenum FROM orders WHERE DATE(date) = ? AND status IN ('Finished', 'Paid', 'Pending')");
             ps.setString(1, transdate);
-            ps.setString(2, "Finished");
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
                 Order o = new Order(rs.getInt("ordid"));
