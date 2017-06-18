@@ -11,21 +11,17 @@ import com.panbox.beans.EmployeeList;
 import com.panbox.beans.Product;
 import com.panbox.beans.Order;
 import com.panbox.beans.OrderList;
-import com.panbox.beans.ProductList;
-import com.panbox.beans.Stock;
+import com.panbox.beans.ProdList;
 import com.panbox.beans.User;
 import com.panbox.beans.Sale;
 import java.io.StringReader;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -34,16 +30,13 @@ import java.util.logging.Logger;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.PUT;
 import javax.ws.rs.PathParam;
-import javax.ws.rs.core.Configuration;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.xml.bind.JAXBContext;
@@ -56,7 +49,7 @@ import javax.xml.bind.Unmarshaller;
  * @author gina PC
  */
 @Path("panbox")
-public class PanBoxService {
+public class POSService {
 
     @Context
     private ServletContext context;
@@ -66,7 +59,7 @@ public class PanBoxService {
     /**
      * Creates a new instance of JsontestResource
      */
-    public PanBoxService() {
+    public POSService() {
     }
 
     /**
@@ -76,8 +69,8 @@ public class PanBoxService {
     @GET
     @Path("/products/{category}")
     @Produces(MediaType.APPLICATION_JSON)
-    public ProductList productList(@PathParam("category") String category) {
-        ProductList pl = new ProductList();
+    public ProdList productList(@PathParam("category") String category) {
+        ProdList pl = new ProdList();
         ArrayList<Product> list = new ArrayList<>();
         Connection conn = (Connection) context.getAttribute("conn");
         try {
@@ -99,29 +92,6 @@ public class PanBoxService {
         }
         pl.setList(list);
         return pl;
-    }
-    
-    @GET
-    @Path("/stocks")
-    @Produces(MediaType.APPLICATION_JSON)
-    public ArrayList<Stock> stockList() {
-        ArrayList<Stock> list = new ArrayList<>();
-        //Connection conn = (Connection) context.getProperty("conn");
-        Connection conn = (Connection) context.getAttribute("conn");
-        try {
-            //con = DriverManager.getConnection("jdbc:mysql://localhost:3306/cofmat", "root", "");
-            PreparedStatement ps = conn.prepareStatement("SELECT * FROM stocks");
-            ResultSet rs = ps.executeQuery();
-            while(rs.next()) {
-                /*Product p = new Product(rs.getString("prodname"), rs.getString("proddesc"), rs.getInt("price") + 0.0);
-                p.setId(rs.getInt("prodid"));
-                list.add(p);*/
-                list.add(new Stock(rs.getInt("stockid"), rs.getString("stockname")));
-            }
-        } catch (Exception e) {
-            System.out.println("Exception: " + e);
-        }
-        return list;
     }
     
     @POST
@@ -207,30 +177,6 @@ public class PanBoxService {
         return ol;
     }
     
-    @GET
-    @Path("/billofmat/{prodid}")
-    @Produces(MediaType.APPLICATION_JSON)
-    public BillOfMat getBillOfMaterials(@PathParam("prodid") String prodid) {
-        BillOfMat bm = new BillOfMat(Integer.parseInt(prodid));
-        HashMap<String, Integer> bill = bm.getMaterials();
-        Connection conn = (Connection) context.getAttribute("conn");
-        try {
-            PreparedStatement billQuery = conn.prepareStatement("SELECT a.stockid, a.stockname, qty FROM stocks a JOIN prodstck b ON a.stockid = b.stockid JOIN products c ON c.prodid = b.prodid WHERE c.prodid = ?");
-            billQuery.setInt(1, Integer.parseInt(prodid));
-            ResultSet billResult = billQuery.executeQuery();
-            while(billResult.next()) {
-                Stock s = new Stock(billResult.getInt("stockid"), billResult.getString("stockname"));
-                bill.put(billResult.getString("stockname"), billResult.getInt("qty"));
-            }
-            billQuery.close();
-            billResult.close();
-            bm.setMaterials(bill);
-        } catch (Exception e) {
-            System.out.println("Exception: " + e);
-        }
-        return bm;
-    }
-    
     @POST
     @Path("/adduser")
     @Produces(MediaType.APPLICATION_JSON)
@@ -258,34 +204,12 @@ public class PanBoxService {
         return uArr;
     }
     
-    @GET
-    @Path("/test2")
-    @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    public User putXml2() {
-        //HashMap<String, String> hm = new HashMap<>();
-        //hm.put("Test", "2");
-        return new User("test", "user");
-        //return hm;
-    }
-    
-    @GET
-    @Path("/ordertest")
-    @Produces({MediaType.APPLICATION_JSON})
-    public Order orderTest() {
-        
-        Order o = new Order();
-        Map<String, Integer> hm = o.getProdlist();
-        hm.put("Pie", 2);
-        hm.put("Sandwich", 3);
-        o.setProdlist(hm);
-        return o;
-    }
-    
     @POST
     @Path("/sendorder")
     @Consumes({MediaType.APPLICATION_JSON})
     @Produces(MediaType.APPLICATION_JSON)
     public Order acceptOrder(Order o) {
+        
         if(o.getProdlist().size() != 0) {
             Map<String, Integer> hm = o.getProdlist();
             Iterator<String> itr = hm.keySet().iterator();
@@ -303,7 +227,7 @@ public class PanBoxService {
                 //Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/panbox", "root", "root");
                 //Insert Order
                 PreparedStatement ordQuery = conn.prepareStatement("INSERT INTO orders (total, status, date, tablenum) VALUES (?,?,?,?)");
-                ordQuery.setDouble(1, o.getTotal());
+                ordQuery.setDouble(1, reTotal);
                 ordQuery.setString(2, "unpaid");
                 ordQuery.setString(3, current);
                 ordQuery.setInt(4, o.getTablenum());
@@ -321,6 +245,8 @@ public class PanBoxService {
                     itemQuery.setInt(2, orderId);
                     itemQuery.setInt(3, hm.get(currentProd));
                     itemQuery.executeUpdate();
+                    
+                    //subtract from ledger
                 }
             } catch (Exception e) {
                 System.out.println("Exception:[acceptOrder]" + e);
@@ -359,7 +285,7 @@ public class PanBoxService {
             
             //update order status
             PreparedStatement orderUpdate = conn.prepareStatement("UPDATE orders SET status = ?, tablenum = ? WHERE ordid = ?");
-            orderUpdate.setString(1, "Pending");
+            orderUpdate.setString(1, "Paid");
             orderUpdate.setInt(2, s.getOrder().getTablenum());
             orderUpdate.setInt(3, orderId);
             orderUpdate.executeUpdate();
@@ -370,16 +296,15 @@ public class PanBoxService {
     }
     
     @POST
-    @Path("/changestatus")
+    @Path("/pendingstatus")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.TEXT_PLAIN)
-    public String changeStatus(@FormParam("orderid") int orderid,
-            @FormParam("status") String status) {
+    public String changeStatus(@FormParam("orderid") int orderid) {
         String response = "Status Changed";
         Connection conn = (Connection) context.getAttribute("conn");
         try {
             PreparedStatement statQuery = conn.prepareStatement("UPDATE orders SET status = ? WHERE ordid = ?");
-            statQuery.setString(1, status);
+            statQuery.setString(1, "Pending");
             statQuery.setInt(2, orderid);
             statQuery.executeUpdate();
         } catch (Exception e) {
@@ -387,6 +312,43 @@ public class PanBoxService {
             response = "Exception";
         }
         return response;
+    }
+    
+    @POST
+    @Path("/finishstatus")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.TEXT_PLAIN)
+    public String finishOrder(@FormParam("orderid") String orderid,
+            @FormParam("baristaid") String baristaid,
+            @FormParam("cookid") String cookid) {
+        String resp = "OK";
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            int ordid = Integer.parseInt(orderid);
+            int bid = Integer.parseInt(baristaid);
+            int cid = Integer.parseInt(cookid);
+            PreparedStatement statQuery = conn.prepareStatement("UPDATE orders SET status = ? WHERE ordid = ?");
+            statQuery.setString(1, "Finished");
+            statQuery.setInt(2, ordid);
+            statQuery.executeUpdate();
+            
+            //query all 'food' products from order and update ordprod
+            PreparedStatement foodQuery = conn.prepareStatement("UPDATE ordprod JOIN products ON prodid = prdid SET empid = ? WHERE orid = ? AND category = ?");
+            foodQuery.setInt(1, cid);
+            foodQuery.setInt(2, ordid);
+            foodQuery.setString(3, "Food");
+            foodQuery.executeUpdate();
+            //query all 'beverage' products from order and update ordprod
+            PreparedStatement bevQuery = conn.prepareStatement("UPDATE ordprod JOIN products ON prodid = prdid SET empid = ? WHERE orid = ? AND category = ?");
+            bevQuery.setInt(1, bid);
+            bevQuery.setInt(2, ordid);
+            bevQuery.setString(3, "Beverage");
+            bevQuery.executeUpdate();
+        } catch (Exception e) {
+            System.out.println("Exception[finishorder]: " + e);
+            resp = "Error";
+        }
+        return resp;
     }
     
     @POST
@@ -437,32 +399,6 @@ public class PanBoxService {
         return ret;
     } 
     
-    @POST
-    @Path("/sendorderandroid")
-    @Consumes(MediaType.APPLICATION_JSON)
-    public void acceptAndroidOrder(AndroidOrder ao) {
-        ArrayList<Product> pl = ao.getPl();
-        Order o = new Order();
-        HashMap<String, Integer> hm = new HashMap<>();
-        for(int i = 0; i < pl.size(); i++) {
-            Product p = pl.get(i);
-            hm.put(p.getName(), p.getQty());
-        }
-        //acceptOrder(o);
-    }
-    
-    @POST
-    @Path("/checkorderpojo")
-    @Consumes(MediaType.APPLICATION_JSON)
-    public void checkOrder(Order o) {
-        System.out.println(o.getTotal());
-        /*HashMap<String, Integer> hm = o.getProdlist();
-        Iterator<String> itr = hm.keySet().iterator();
-        while(itr.hasNext()) {
-            System.out.println(itr.next());
-        }*/
-    }
-    
     @GET
     @Path("/androidtest")
     @Produces(MediaType.APPLICATION_JSON)
@@ -498,7 +434,7 @@ public class PanBoxService {
             AndroidOrder ao = (AndroidOrder) unmarshaller.unmarshal(json);
             System.out.println(ao.getPl().get(0).getName());
         } catch (JAXBException ex) {
-            Logger.getLogger(PanBoxService.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(POSService.class.getName()).log(Level.SEVERE, null, ex);
         }
         return Response.status(200).entity("Order accepted").build();
     }
@@ -578,32 +514,6 @@ public class PanBoxService {
             ret = -1;
         }
         return ret;
-    }
-    
-    @GET
-    @Path("/employeelist")
-    @Produces(MediaType.APPLICATION_JSON)
-    public EmployeeList getEmployeeList() {
-        EmployeeList el = new EmployeeList();
-        ArrayList<User> list = new ArrayList<>();
-        Connection conn = (Connection) context.getAttribute("conn");
-        try {
-            PreparedStatement empQuery = conn.prepareStatement("SELECT * FROM employees");
-            ResultSet empRes = empQuery.executeQuery();
-            while(empRes.next()) {
-                User u = new User();
-                u.setName(empRes.getString("name"));
-                u.setAddress(empRes.getString("address"));
-                u.setPosition(empRes.getString("position"));
-                u.setDateHired(empRes.getInt("contacts") + "");
-                u.setId(empRes.getInt("empid"));
-                list.add(u);
-            }
-            el.setList(list);
-        } catch (Exception e) {
-            System.out.println("Exception[emplist]: " + e);
-        }
-        return el;
     }
     
     @POST
@@ -703,4 +613,6 @@ public class PanBoxService {
         }
         return ol;
     }
+    
+    
 }

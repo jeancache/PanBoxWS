@@ -1,9 +1,11 @@
+package com.panbox.beans;
+
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.panbox.beans;
+
 
 import java.io.Serializable;
 import javax.xml.bind.annotation.XmlAccessType;
@@ -19,33 +21,128 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class Stock implements Serializable {
     @XmlElement(required=true)
-    private int id;
+    private int stckid;
     @XmlElement(required=true)
-    private String stockName;
-
+    private String stckname;
+    @XmlElement(required=true)
+    private double qty;
+    @XmlElement(required=true)
+    private String kitchenunit;
+    @XmlElement
+    private String deliveryunit;
+    @XmlElement(required=true)
+    private double equivalent;
+    @XmlElement(required=true)
+    private String type;
+    @XmlElement
+    private int supid;
+    @XmlElement
+    private String supname;
+    @XmlElement
+    private int reorderpt;
+    @XmlElement
+    private int reorderqty;
+        
     public Stock() {
     }
-
-    public Stock(int id, String stockName) {
-        this.id = id;
-        this.stockName = stockName;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getStockName() {
-        return stockName;
-    }
-
-    public void setStockName(String stockName) {
-        this.stockName = stockName;
+    
+    public Stock(String stckname, double qty, String kitchenunit, String deliveryunit, double equivalent, String type, int reorderpt, int reorderqty) {
+        this.stckname = stckname;
+        this.qty = qty;
+        this.kitchenunit = kitchenunit;
+        this.deliveryunit = deliveryunit;
+        this.equivalent = equivalent;
+        this.type = type;
+        this.reorderpt = reorderpt;
+        this.reorderqty = reorderqty;
     }
     
+    public int getSupid() {
+        return supid;
+    }
+
+    public void setSupid(int supid) {
+        this.supid = supid;
+    }
+
+    public String getSupname() {
+        return supname;
+    }
+
+    public void setSupname(String supname) {
+        this.supname = supname;
+    }
     
-}
+    public int getStckid() {
+        return stckid;
+    }
+
+    public void setStckid(int stckid) {
+        this.stckid = stckid;
+    }
+
+    public String getStckname() {
+        return stckname;
+    }
+
+    public void setStckname(String stckname) {
+        this.stckname = stckname;
+    }
+
+    public double getQty() {
+        return qty;
+    }
+
+    public void setQty(double qty) {
+        this.qty = qty;
+    }
+
+    public String getKitchenunit() {
+        return kitchenunit;
+    }
+
+    public void setKitchenunit(String kitchenunit) {
+        this.kitchenunit = kitchenunit;
+    }
+
+    public String getDeliveryunit() {
+        return deliveryunit;
+    }
+
+    public void setDeliveryunit(String deliveryunit) {
+        this.deliveryunit = deliveryunit;
+    }
+
+    public double getEquivalent() {
+        return equivalent;
+    }
+
+    public void setEquivalent(double equivalent) {
+        this.equivalent = equivalent;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public int getReorderpt() {
+        return reorderpt;
+    }
+
+    public void setReorderpt(int reorderpt) {
+        this.reorderpt = reorderpt;
+    }
+
+    public int getReorderqty() {
+        return reorderqty;
+    }
+
+    public void setReorderqty(int reorderqty) {
+        this.reorderqty = reorderqty;
+    }
+    
+    }

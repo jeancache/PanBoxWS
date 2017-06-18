@@ -5,13 +5,6 @@
  */
 package com.panbox.beans;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import javax.xml.bind.annotation.XmlAccessType;
@@ -23,22 +16,22 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author gina PC
  */
-@XmlRootElement(name="employeeList")
+@XmlRootElement(name="supplierList")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class EmployeeList implements Serializable {
+public class SupplierList implements Serializable {
     @XmlElement(required=true)
-    ArrayList<Employee> list;
+    ArrayList<Supplier> list;
 
-    public EmployeeList(){
+    public SupplierList(){
     }
-    public EmployeeList(ArrayList<Employee> list){
+    public SupplierList(ArrayList<Supplier> list){
         this.list = list;
     }
-    public ArrayList<Employee> getList() {
+    public ArrayList<Supplier> getList() {
         return list;
     }
 
-    public void setList(ArrayList<Employee> list) {
+    public void setList(ArrayList<Supplier> list) {
         this.list = list;
     }
 }
