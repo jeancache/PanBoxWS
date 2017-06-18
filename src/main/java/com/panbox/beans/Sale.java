@@ -24,6 +24,13 @@ public class Sale implements Serializable {
     private double change;
     @XmlElement
     private Order order;
+    @XmlElement
+    private Rental rental;
+    @XmlElement
+    private int empid;
+    @XmlElement
+    private double discount;
+    
 
     public Sale() {
     }
@@ -50,6 +57,30 @@ public class Sale implements Serializable {
 
     public void setOrder(Order order) {
         this.order = order;
+    }
+
+    public Rental getRental() {
+        return rental;
+    }
+
+    public void setRental(Rental rental) {
+        this.rental = rental;
+    }
+
+    public int getEmpid() {
+        return empid;
+    }
+
+    public void setEmpid(int empid) {
+        this.empid = empid;
+    }
+
+    public double getDiscount() {
+        return discount;
+    }
+
+    public void setDiscount(double discount) {
+        this.discount = discount;
     }
     
     

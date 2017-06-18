@@ -14,24 +14,24 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  *
- * @author hp
+ * @author gina PC
  */
-@XmlRootElement
+@XmlRootElement(name="supplierList")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class AndroidOrder implements Serializable {
-    @XmlElement
-    private ArrayList<Product> pl;
+public class SupplierList implements Serializable {
+    @XmlElement(required=true)
+    ArrayList<Supplier> list;
 
-    public AndroidOrder() {
+    public SupplierList(){
+    }
+    public SupplierList(ArrayList<Supplier> list){
+        this.list = list;
+    }
+    public ArrayList<Supplier> getList() {
+        return list;
     }
 
-    public ArrayList<Product> getPl() {
-        return pl;
+    public void setList(ArrayList<Supplier> list) {
+        this.list = list;
     }
-
-    public void setPl(ArrayList<Product> pl) {
-        this.pl = pl;
-    }
-    
-    
 }

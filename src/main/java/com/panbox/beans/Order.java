@@ -38,6 +38,9 @@ public class Order implements Serializable {
     @XmlElement
     private int tablenum;
     
+    @XmlElement
+    private String status;
+    
     public Order() {
         
     }
@@ -76,6 +79,14 @@ public class Order implements Serializable {
 
     public void setTablenum(int tablenum) {
         this.tablenum = tablenum;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
     
     

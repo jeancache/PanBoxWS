@@ -25,20 +25,22 @@ public class Product implements Serializable {
     @XmlElement(required=true)
     private String name;
     @XmlElement
-    private String description;
-    @XmlElement(required=true)
+    private String category;
+    @XmlElement
     private double price;
     @XmlElement
     private int qty;
     @XmlElement
     private int empid;
+    @XmlElement
+    private boolean available;
 
     public Product() {
     }
 
-    public Product(String name, String description, double price) {
+    public Product(String name, String category, double price) {
         this.name = name;
-        this.description = description;
+        this.category = category;
         this.price = price;
     }
 
@@ -58,12 +60,12 @@ public class Product implements Serializable {
         this.name = name;
     }
 
-    public String getDescription() {
-        return description;
+    public String getCategory() {
+        return category;
     }
 
     public void setDescription(String description) {
-        this.description = description;
+        this.category = description;
     }
 
     public double getPrice() {
@@ -88,6 +90,14 @@ public class Product implements Serializable {
 
     public void setEmpid(int empid) {
         this.empid = empid;
+    }
+
+    public boolean isAvailable() {
+        return available;
+    }
+
+    public void setAvailable(boolean available) {
+        this.available = available;
     }
     
     

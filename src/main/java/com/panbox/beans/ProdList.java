@@ -18,11 +18,15 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ProductList implements Serializable {
+public class ProdList implements Serializable {
     @XmlElement
     private ArrayList<Product> list;
 
-    public ProductList() {
+    public ProdList() {
+    }
+
+    public ProdList(ArrayList<Product> list) {
+        this.list = list;
     }
 
     public ArrayList<Product> getList() {

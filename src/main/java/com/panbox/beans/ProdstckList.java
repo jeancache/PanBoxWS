@@ -23,22 +23,22 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * @author gina PC
  */
-@XmlRootElement(name="employeeList")
+@XmlRootElement(name="prodstckList")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class EmployeeList implements Serializable {
+public class ProdstckList implements Serializable {
     @XmlElement(required=true)
-    ArrayList<Employee> list;
+    ArrayList<Prodstck> list;
 
-    public EmployeeList(){
+    public ProdstckList(){
     }
-    public EmployeeList(ArrayList<Employee> list){
+    public ProdstckList(ArrayList<Prodstck> list){
         this.list = list;
     }
-    public ArrayList<Employee> getList() {
+    public ArrayList<Prodstck> getList() {
         return list;
     }
 
-    public void setList(ArrayList<Employee> list) {
+    public void setList(ArrayList<Prodstck> list) {
         this.list = list;
     }
 }
