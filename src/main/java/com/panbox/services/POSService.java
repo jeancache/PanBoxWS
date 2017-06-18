@@ -74,7 +74,7 @@ public class POSService {
         ArrayList<Product> list = new ArrayList<>();
         Connection conn = (Connection) context.getAttribute("conn");
         try {
-            PreparedStatement ps = conn.prepareStatement("SELECT * FROM products WHERE category = ?");
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM products WHERE category = ? and status = 'active' ");
             ps.setString(1, category);
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
@@ -865,7 +865,7 @@ public class POSService {
         ArrayList<Product> list = new ArrayList<>();
         Connection conn = (Connection) context.getAttribute("conn");
         try {
-            PreparedStatement ps = conn.prepareStatement("SELECT * FROM products");
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM products WHERE and status = 'active' ");
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
                 Product p = new Product();
