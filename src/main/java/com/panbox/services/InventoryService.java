@@ -1,6 +1,5 @@
 package com.panbox.services;
 
-
 import com.panbox.beans.Category;
 import com.panbox.beans.Employee;
 import com.panbox.beans.EmployeeList;
@@ -16,7 +15,8 @@ import com.panbox.beans.StckCompound;
 import com.panbox.beans.StckCompoundList;
 import com.panbox.beans.StckPurOrd;
 import com.panbox.beans.StckPurOrdList;
-import com.panbox.beans.Stcksup;
+import com.panbox.beans.StckSup;
+import com.panbox.beans.StckSupList;
 import com.panbox.beans.Stock;
 import com.panbox.beans.StockList;
 import com.panbox.beans.Supplier;
@@ -70,6 +70,34 @@ public class InventoryService {
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
                 Product p = new Product(rs.getString("prodname"), rs.getString("category"), rs.getDouble("price"));
+                p.setStatus(rs.getString("status"));
+                p.setId(rs.getInt("prodid"));
+                list.add(p);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        ProdList prodlist = new ProdList(list);
+        return prodlist;
+    }
+    
+    @GET
+    @Path("/productlist/{order}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public ProdList productslist(@PathParam("order") String order) {
+        ArrayList<Product> list = new ArrayList<>();
+        PreparedStatement ps;
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            if(order.equals("DESC")){
+                ps = conn.prepareStatement("SELECT * FROM products ORDER BY prodname DESC");
+            }else{
+                ps = conn.prepareStatement("SELECT * FROM products ORDER BY prodname ASC");
+            }
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                Product p = new Product(rs.getString("prodname"), rs.getString("category"), rs.getDouble("price"));
+                p.setStatus(rs.getString("status"));
                 p.setId(rs.getInt("prodid"));
                 list.add(p);
             }
@@ -105,6 +133,27 @@ public class InventoryService {
     }
     
     @POST
+    @Path("/updateprodstat")
+    @Produces(MediaType.TEXT_PLAIN)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public String updateProductStatus(@FormParam("status") String status,
+            @FormParam("id") int id) {
+        String message = "Error";
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("UPDATE products SET status = ? WHERE prodid = ?");
+            ps.setString(1, status);
+            ps.setInt(2, id);
+            ps.executeUpdate();
+            message = "updated";
+        }catch (Exception e) {
+            e.printStackTrace();
+            message = "error";
+        }
+        return message;
+    }
+            
+    @POST
     @Path("/addAccount")
     @Produces(MediaType.APPLICATION_JSON)
     public Employee addAccount(@FormParam("name") String name,
@@ -134,24 +183,25 @@ public class InventoryService {
     
     @POST
     @Path("/updateReturnSPO")
-    @Produces(MediaType.TEXT_PLAIN)
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.TEXT_PLAIN)
     public String updateReturnSPO(@FormParam("qtyremaining") int qtyremaining,
-        @FormParam("poid") int poid,
-        @FormParam("stksid") int stksid) {
-        String message = "Updated";
+            @FormParam("poid") int poid,
+            @FormParam("stksid") int stksid) {
+        String status;
         Connection conn = (Connection) context.getAttribute("conn");
-        try{
-            PreparedStatement ps = conn.prepareStatement("UPDATE stckpurord SET qtyremaining= ? WHERE poid = ? AND stksid = ?");
+        try {
+            PreparedStatement ps = conn.prepareStatement("UPDATE `stckpurord` SET `qtyremaining`=? WHERE `stksid` = ? AND `poid` = ?");
             ps.setInt(1, qtyremaining);
-            ps.setInt(2, poid);
-            ps.setInt(3, stksid);
+            ps.setInt(2, stksid);
+            ps.setInt(3, poid);
             ps.executeUpdate();
-        }catch(Exception e){
-            message = "error";
-            e.printStackTrace();
+            status = "updated";
+        } catch(Exception e) {
+            status = "error";
+            System.out.println("Exception[addaccount]: " + e);
         }
-        return message;
+        return status;
     }
     
     @POST
@@ -176,13 +226,43 @@ public class InventoryService {
         }
         return message;
     }
-   
+    
+    //returns employee object if employee credentials are valid, else, return empty employee object and set id to -1 or -2
+    @POST
+    @Path("/adminlogin")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Employee adminLogin(@FormParam("name") String name,
+            @FormParam("password") String password,
+            @Context HttpServletResponse servletResponse) {
+        Employee e = new Employee();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM employees WHERE username = ? AND password = ? AND position = \"Owner\"");
+            ps.setString(1, name);
+            ps.setString(2, password);
+            ResultSet rs = ps.executeQuery();
+            if(rs.first()) {
+                e = new Employee(rs.getString("name"),rs.getString("address"), rs.getString("position"), rs.getString("contacts"), rs.getString("date hired"), rs.getString("status"));
+                e.setId(rs.getInt("empid"));
+            }else{
+                e.setId(-1);
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            e.setId(-2);
+        }
+        return e;
+    }
+    
+    //returns employee object if employee credentials are valid, else, return empty employee object and set id to -1 or -2
     @POST
     @Path("/login")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Employee login(@FormParam("name") String name,
-            @FormParam("password") String password) {
+            @FormParam("password") String password,
+            @Context HttpServletResponse servletResponse) {
         Employee e = new Employee();
         Connection conn = (Connection) context.getAttribute("conn");
         try {
@@ -191,24 +271,42 @@ public class InventoryService {
             ps.setString(2, password);
             ResultSet rs = ps.executeQuery();
             if(rs.first()) {
-                e = new Employee(rs.getString("name"), rs.getString("address"), rs.getString("position"), rs.getString("contacts"), rs.getString("date hired"), rs.getString("status"));
+                e = new Employee(rs.getString("name"),rs.getString("address"), rs.getString("position"), rs.getString("contacts"), rs.getString("date hired"), rs.getString("status"));
                 e.setId(rs.getInt("empid"));
-                e.setUsername(rs.getString("username"));
-                e.setPassword(rs.getString("password"));
-            } else {
+            }else{
                 e.setId(-1);
             }
         } catch (Exception ex) {
-            System.out.println("Exception: " + ex);
+            ex.printStackTrace();
             e.setId(-2);
         }
         return e;
     }
-   
-    @GET
-    @Path("/supplier/{name}")
+    
+    @POST
+    @Path("/adjuststckqty")
     @Produces(MediaType.APPLICATION_JSON)
-    public Supplier getSupplier(@PathParam("name") String name) {
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public String adjustStckQty(@FormParam("qty") double qty, @FormParam("stckname") String stckname) {
+        String status = "adjusted";
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("UPDATE stocks SET qty= ? WHERE stckname = ?");
+            ps.setDouble(1, qty);
+            ps.setString(2, stckname);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+            status = "failed";
+        }
+        return status;
+    }    
+    
+    @POST
+    @Path("/suppliername")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Supplier getSupplier(@FormParam("name") String name) {
         Supplier s = new Supplier();
         Connection conn = (Connection) context.getAttribute("conn");
         try{
@@ -279,7 +377,7 @@ public class InventoryService {
     @GET
     @Path("/updatePurOrd/{poid}/{status}")
     @Produces(MediaType.APPLICATION_JSON)
-    public PurchaseOrder updatePurOrd( @PathParam("poid")int poid, @PathParam("status")String status) {
+    public PurchaseOrder updatePurOrd( @PathParam("poid") int poid, @PathParam("status") String status) {
         PurchaseOrder purOrd = new PurchaseOrder();
         Connection conn = (Connection) context.getAttribute("conn");
         try {
@@ -293,7 +391,26 @@ public class InventoryService {
         }
         return purOrd;
     }
-
+    
+    @POST
+    @Path("/addStckComp")
+    @Produces(MediaType.TEXT_PLAIN)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public String addStckComp(StckCompound sc) {
+        String message = "Successfully added product";
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("INSERT INTO `stckcompound`(`stckidbasic`, `stckidcompound`, `qty`) VALUES (?, ?, ?)");
+            ps.setInt(1, sc.getStckidbasic());
+            ps.setInt(2, sc.getStckidcompound());
+            ps.setDouble(3, sc.getQty());
+            ps.executeUpdate();
+        } catch (Exception e) {
+            message = "failed";
+        }
+        return message;
+    }
+    
     @POST
     @Path("/addProduct")
     @Produces(MediaType.TEXT_PLAIN)
@@ -302,12 +419,10 @@ public class InventoryService {
         String message = "Successfully added product";
         Connection conn = (Connection) context.getAttribute("conn");
         try {
-            PreparedStatement ps = conn.prepareStatement("INSERT INTO products( prodname, category, price, status, reservedqty) VALUES (?, ?, ?, ?, ?)");
+            PreparedStatement ps = conn.prepareStatement("INSERT INTO products( prodname, category, price) VALUES (?, ?, ?)");
             ps.setString(1, p.getName());
             ps.setString(2, p.getCategory());
             ps.setDouble(3, p.getPrice());
-            ps.setString(4, "active");
-            ps.setInt(5, 0);
             ps.executeUpdate();
             p.setId(1);
         } catch (Exception e) {
@@ -325,6 +440,9 @@ public class InventoryService {
         Connection conn = (Connection) context.getAttribute("conn");
         try {
             PreparedStatement ps = conn.prepareStatement("INSERT INTO `prodstck`(`prdctid`, `stckid`, `qty`) VALUES (?, ?, ?)");
+            System.out.println(p.getPrdctid());
+            System.out.println(p.getStckid());
+            System.out.println(p.getQty());
             ps.setInt(1, p.getPrdctid());
             ps.setInt(2, p.getStckid());
             ps.setDouble(3, p.getQty());
@@ -334,31 +452,6 @@ public class InventoryService {
         }
         return message;
     }
-    /*
-    @POST
-    @Path("/adduser")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.APPLICATION_XML)
-    public User addUser(User u) {
-        User user = new User();
-        try {
-            con = DriverManager.getConnection("jdbc:mysql://localhost:3306/panbox", "root", "root");
-            PreparedStatement ps = con.prepareStatement("INSERT INTO `employees`(`name`, `position`, `date hired`, `address`, `contacts`, `password`, `username`) VALUES (?,?,?,?,?,?,?)");
-            ps.setString(1, u.getName());
-            ps.setString(2, u.getPosition());
-            ps.setDate(3, u.getDatehired());
-            ps.setString(4, u.getAddress());
-            ps.setString(5, u.getContact());
-            ps.setString(6, u.getPassword());
-            ps.executeUpdate();
-            user.setId(1);
-            user.setName(u.getName());
-        } catch (Exception e) {
-            user.setId(-2);
-        }
-        return user;
-    }
-    */
     
     @POST
     @Path("/addsupplier")
@@ -398,7 +491,7 @@ public class InventoryService {
             PreparedStatement ps2 = conn.prepareStatement("SELECT * FROM `purchase order` ORDER BY poid DESC LIMIT 0, 1");
             ResultSet rs = ps2.executeQuery();
             while(rs.next()) {
-                po = new PurchaseOrder(rs.getString("status"), rs.getString("dateordered"), rs.getString("empname"));
+                po = new PurchaseOrder(rs.getString("dateordered"), rs.getString("status"), rs.getString("empname"));
                 po.setPoid(rs.getInt("poid"));
             }
         } catch (Exception e) {
@@ -428,27 +521,6 @@ public class InventoryService {
     
     //add entry to stock
     @POST
-    @Path("/addstcksup")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.APPLICATION_XML)
-    public Stcksup addStcksup(Stcksup s) {
-        Stcksup ss = new Stcksup();
-        Connection conn = (Connection) context.getAttribute("conn");
-        try {
-            PreparedStatement ps = conn.prepareStatement("INSERT INTO `stcksup`(`suppid`, `stocksid`) VALUES (?, ?)");
-            ps.setInt(1, s.getSuppid());
-            ps.setInt(2, s.getStocksid());
-            ps.executeUpdate();
-            ss.setStocksid(1);
-        } catch (Exception e) {
-            e.printStackTrace();
-            ss.setStocksid(-2);
-        }
-        return ss;
-    }
-    
-    //add entry to stock
-    @POST
     @Path("/addstock")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_XML)
@@ -474,6 +546,89 @@ public class InventoryService {
         return s;
     }
     
+    //add entry to stock
+    @POST
+    @Path("/addstcksup")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_XML)
+    public StckSup addStckSup(StckSup s) {
+        StckSup ss = new StckSup();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("INSERT INTO `stcksup`(`suppid`, `stocksid`) VALUES (?, ?)");
+            ps.setInt(1, s.getSuppid());
+            ps.setInt(2, s.getStocksid());
+            ps.executeUpdate();
+            ss.setStocksid(1);
+        } catch (Exception e) {
+            e.printStackTrace();
+            ss.setStocksid(-2);
+        }
+        return ss;
+    }
+    
+    //delete stckcompounds based on id sent
+    @POST
+    @Path("/deletestckcomp")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public StckCompound deleteStckCompound(@FormParam("stckid") int stckid) {
+        StckCompound sc = new StckCompound();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("DELETE FROM `stckcompound` WHERE `stckidcompound` = ?");
+            ps.setInt(1, stckid);
+            ps.executeUpdate();
+            sc.setStckidcompound(1);
+        } catch (Exception e) {
+            sc.setStckidcompound(-1);
+            //message = "failed";
+            e.printStackTrace();
+        }
+        return sc;
+    }
+    
+    //delete prodstcks based on id sent
+    @POST
+    @Path("/deletestcksup")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public StckSup deleteStcksup(@FormParam("stocksid") int stocksid) {
+        StckSup ss = new StckSup();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("DELETE FROM `stcksup` WHERE `stocksid` = ?");
+            ps.setInt(1, stocksid);
+            ps.executeUpdate();
+            ss.setStocksid(1);
+        } catch (Exception e) {
+            ss.setStocksid(-1);
+            //message = "failed";
+            e.printStackTrace();
+        }
+        return ss;
+    }
+    
+    //add entry to stock
+    @POST
+    @Path("/deleteprodstck")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Prodstck deleteProdStck(@FormParam("prodid") int prodid) {
+        Prodstck prodstck = new Prodstck();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("DELETE FROM `prodstck` WHERE `prdctid` = ?");
+            ps.setInt(1, prodid);
+            ps.executeUpdate();
+            prodstck.setPrdctid(1);
+        } catch (Exception e) {
+            prodstck.setPrdctid(-1);
+            e.printStackTrace();
+        }
+        return prodstck;
+    }
+    
     //return an arraylist of stckpurord object fetched from the database based on the foreign key poid
     @GET
     @Path("/stckpurord/{poid}")
@@ -485,7 +640,7 @@ public class InventoryService {
             PreparedStatement ps = conn.prepareStatement("SELECT a.stksid, a.poid, a.supid, a.datedelivered, a.qtyordered, a.qtydelivered,a.status, a.qtyremaining, b.stckname, b.equivalent, b.deliveryunit, c.empname, d.supname  FROM stckpurord a INNER JOIN stocks b ON a.stksid = b.stckid INNER JOIN `purchase order` c ON a.poid = c.poid INNER JOIN supplier d ON a.supid = d.supid WHERE a.poid = ?");
             ps.setInt(1, poid );
             ResultSet rs = ps.executeQuery();
-            while(rs.next()) {
+            while(rs.next()){
                 StckPurOrd spo = new StckPurOrd(rs.getInt("stksid"), rs.getInt("supid"), rs.getInt("poid"), rs.getInt("qtyordered"));
                 spo.setDatedelivered(rs.getString("datedelivered"));
                 spo.setQtydelivered( rs.getInt("qtydelivered"));
@@ -503,7 +658,7 @@ public class InventoryService {
         }
         StckPurOrdList spoList = new StckPurOrdList(stckpurordlist);
         return spoList;
-    } 
+    }
     
     @GET
     @Path("/ledgerrecord/{stckid}")
@@ -515,6 +670,7 @@ public class InventoryService {
             PreparedStatement ps = conn.prepareStatement("SELECT * FROM `ledger` WHERE stckid = ?");
             ps.setInt(1, stckid );
             ResultSet rs = ps.executeQuery();
+            
             while(rs.next()) {
                 LedgerRecord lr = new LedgerRecord( rs.getInt("stckid"), rs.getString("date"), rs.getDouble("qtybefore"), rs.getDouble("qtyafter"), rs.getString("reason") );
                 lr.setQtyin(rs.getDouble("qtyin"));
@@ -530,6 +686,29 @@ public class InventoryService {
         return ledger;
     }
     
+    @GET
+    @Path("/stckcompounds/{stckid}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public StckCompoundList getStckcompounds(@PathParam("stckid") int stckid) {
+        ArrayList<StckCompound> sclist = new ArrayList<>();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT a.`stckidcompound`, a.`qty`, b.stckid, b.stckname, b.kitchenunit FROM stckcompound a JOIN stocks b ON a.stckidbasic = b.stckid WHERE a.`stckidcompound` = ?");
+            ps.setInt(1, stckid );
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                StckCompound sc = new StckCompound(rs.getInt("stckid"), rs.getInt("stckidcompound"), rs.getDouble("qty"));
+                sc.setStckname(rs.getString("stckname"));
+                sc.setKitchenunit(rs.getString("kitchenunit"));
+                sclist.add(sc);
+            }
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+        StckCompoundList stckclist = new StckCompoundList(sclist);
+        return stckclist;
+    }
+
     @POST
     @Path("/updateStckPurOrd")
     @Produces(MediaType.TEXT_PLAIN)
@@ -556,7 +735,6 @@ public class InventoryService {
         return message;
     }
 
-
     //insert purchase order row to ledgerrecord and return ledgerrecord object
     @POST
     @Path("/addledgerrecordpurchaseorder")
@@ -581,6 +759,103 @@ public class InventoryService {
             e.printStackTrace();
         }
         return message;
+    }
+    
+    //insert purchase order row to ledgerrecord and return ledgerrecord object
+    @POST
+    @Path("/addledgerrecordcreatecomp")
+    @Produces(MediaType.TEXT_PLAIN)
+    @Consumes(MediaType.APPLICATION_XML)
+    public String addLedgerCCRecord(LedgerRecord lr) {
+        String message = "added";
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("INSERT INTO `ledger`(`date`, `qtyin`, `qtyout`, `qtybefore`, `qtyafter`, `reason`, `stckid`) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            ps.setString(1, lr.getDate());
+            ps.setDouble(2, lr.getQtyin());
+            ps.setDouble(3, lr.getQtyout());
+            ps.setDouble(4, lr.getQtybefore());
+            ps.setDouble(5, lr.getQtyafter());
+            ps.setString(6, lr.getReason());
+            ps.setDouble(7, lr.getStckid());
+            ps.executeUpdate();
+        } catch (Exception e) {
+            message = "error";
+            e.printStackTrace();
+        }
+        return message;
+    }
+    
+    //insert purchase order row to ledgerrecord and return ledgerrecord object
+    @POST
+    @Path("/addledgerrecord")
+    @Produces(MediaType.TEXT_PLAIN)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public String addLedgerRecord(LedgerRecord lr) {
+        String message = "added";
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("INSERT INTO `ledger`(`date`, `qtyin`, `qtyout`, `qtybefore`, `qtyafter`, `reason`, `stckid`) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            ps.setString(1, lr.getDate());
+            ps.setDouble(2, lr.getQtyin());
+            ps.setDouble(3, lr.getQtyout());
+            ps.setDouble(4, lr.getQtybefore());
+            ps.setDouble(5, lr.getQtyafter());
+            ps.setString(6, lr.getReason());
+            ps.setDouble(7, lr.getStckid());
+            ps.executeUpdate();
+        } catch (Exception e) {
+            message = "error";
+            e.printStackTrace();
+        }
+        return message;
+    }
+    
+    //update stock details
+    @POST
+    @Path("/updatestck")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_XML)
+    public Stock updateStck(Stock s) {
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("UPDATE `stocks` SET `stckname`= ?, `reorder point`= ?,`reorder quantity`= ?,`kitchenunit`= ?,`deliveryunit`= ?,`equivalent`= ?,`type`= ? WHERE `stckid` = ?");
+            ps.setString(1, s.getStckname());
+            ps.setInt(2, s.getReorderpt());
+            ps.setInt(3, s.getReorderqty());
+            ps.setString(4, s.getKitchenunit());
+            ps.setString(5, s.getDeliveryunit());
+            ps.setDouble(6, s.getEquivalent());
+            ps.setString(7, s.getType());
+            ps.setInt(8, s.getStckid());
+            ps.executeUpdate();
+            s.setStckid(1);
+        } catch (Exception e) {
+            s.setStckid(-2);
+            e.printStackTrace();
+        }
+        return s;
+    }
+    
+    @POST
+    @Path("/updateproduct")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_XML)
+    public Product updateProduct(Product p) {
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("UPDATE `products` SET prodname=?,`category`=?,`price`=? WHERE `prodid` = ?");
+            ps.setString(1, p.getName());
+            ps.setString(2, p.getCategory());
+            ps.setDouble(3, p.getPrice());
+            ps.setInt(4, p.getId());
+            ps.executeUpdate();
+            p.setId(1);
+        } catch (Exception e) {
+            p.setId(-2);
+            e.printStackTrace();
+        }
+        return p;
     }
     
     //update qty of stock; add or subtract
@@ -651,7 +926,7 @@ public class InventoryService {
         ArrayList<Supplier> list = new ArrayList<>();
         Connection conn = (Connection) context.getAttribute("conn");
         try {
-            PreparedStatement ps = conn.prepareStatement("SELECT * FROM supplier ORDER BY supid DESC");
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM supplier ORDER BY supname ASC");
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
                 
@@ -691,6 +966,158 @@ public class InventoryService {
     }
     
     @GET
+    @Path("/purchaseOrderList/{status}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public PurchaseOrderList getPurchaseOrderListFromStatus(@PathParam("status") String status) {
+        ArrayList<PurchaseOrder> purchaseOrders = new ArrayList<>();
+        PurchaseOrder po = new PurchaseOrder();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM `purchase order` WHERE status = ?");
+            ps.setString(1, status);
+            ResultSet rs = ps.executeQuery();
+                while(rs.next()) {
+                    po = new PurchaseOrder(rs.getString("dateordered"), rs.getString("status"), rs.getString("empname"));
+                    po.setPoid(rs.getInt("poid"));
+                    purchaseOrders.add(po);
+                }
+            }catch(Exception e){
+            e.printStackTrace();
+        }
+        PurchaseOrderList poList = new PurchaseOrderList(purchaseOrders);
+        return poList;
+    }
+    
+    @GET
+    @Path("/stckpurords/{date}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public StckPurOrdList stckPurOrdListFromDate(@PathParam("date") String date) {
+        ArrayList<StckPurOrd> stckpurordlist = new ArrayList<>();
+        StckPurOrd spo = new StckPurOrd();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("SELECT a.`poid`, a.`dateordered`, b.datedelivered, a.`empname`, c.stckname, c.deliveryunit, b.qtyordered, b.qtydelivered, a.`status`, b.stksid, a.poid, d.supid, d.supname, c.equivalent FROM `purchase order` a INNER JOIN stckpurord b ON a.poid = b.poid INNER JOIN stocks c ON b.stksid = c.stckid INNER JOIN supplier d ON b.supid = d.supid WHERE DATE(a.dateordered)=?");
+            ps.setString(1, date);
+            ResultSet rs = ps.executeQuery();
+                while(rs.next()){
+                spo = new StckPurOrd(rs.getInt("stksid"), rs.getInt("supid"), rs.getInt("poid"), rs.getInt("qtyordered"));
+                spo.setDateordered(rs.getString("dateordered"));
+                spo.setDatedelivered(rs.getString("datedelivered"));
+                spo.setQtydelivered( rs.getInt("qtydelivered"));
+                spo.setStckname( rs.getString("stckname"));
+                spo.setEmpname( rs.getString("empname"));
+                spo.setSupname( rs.getString("supname"));
+                spo.setEquivalent( rs.getDouble("equivalent"));
+                spo.setDeliveryunit( rs.getString("deliveryunit"));
+                spo.setStatus(rs.getString("status"));
+                stckpurordlist.add(spo);
+            }
+            }catch(Exception e){
+            e.printStackTrace();
+        }
+        StckPurOrdList spoList = new StckPurOrdList(stckpurordlist);
+        return spoList;
+    }
+    
+    @POST
+    @Path("/stckpurordsquery")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.APPLICATION_JSON)
+    public StckPurOrdList stckPurOrdListBetweenDate(@FormParam("datefrom") String datefrom, @FormParam("dateto") String dateto) {
+        ArrayList<StckPurOrd> stckpurordlist = new ArrayList<>();
+        StckPurOrd spo = new StckPurOrd();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("SELECT a.`poid`, a.`dateordered`, b.datedelivered, a.`empname`, c.stckname, c.deliveryunit, b.qtyordered, b.qtydelivered, a.`status`, b.stksid, a.poid, d.supid, d.supname, c.equivalent FROM `purchase order` a INNER JOIN stckpurord b ON a.poid = b.poid INNER JOIN stocks c ON b.stksid = c.stckid INNER JOIN supplier d ON b.supid = d.supid WHERE DATE(a.dateordered) BETWEEN ? AND ?");
+            ps.setString(1, datefrom);
+            ps.setString(2, dateto);
+            ResultSet rs = ps.executeQuery();
+                while(rs.next()){
+                spo = new StckPurOrd(rs.getInt("stksid"), rs.getInt("supid"), rs.getInt("poid"), rs.getInt("qtyordered"));
+                spo.setDateordered(rs.getString("dateordered"));
+                spo.setDatedelivered(rs.getString("datedelivered"));
+                spo.setQtydelivered( rs.getInt("qtydelivered"));
+                spo.setStckname( rs.getString("stckname"));
+                spo.setEmpname( rs.getString("empname"));
+                spo.setSupname( rs.getString("supname"));
+                spo.setEquivalent( rs.getDouble("equivalent"));
+                spo.setDeliveryunit( rs.getString("deliveryunit"));
+                spo.setStatus(rs.getString("status"));
+                stckpurordlist.add(spo);
+            }
+            }catch(Exception e){
+            e.printStackTrace();
+        }
+        StckPurOrdList spoList = new StckPurOrdList(stckpurordlist);
+        return spoList;
+    }
+    
+    @POST
+    @Path("/stckpurordsmonth")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.APPLICATION_JSON)
+    public StckPurOrdList stckPurOrdListMonth(@FormParam("month") String month, @FormParam("year") String year) {
+        ArrayList<StckPurOrd> stckpurordlist = new ArrayList<>();
+        StckPurOrd spo = new StckPurOrd();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("SELECT a.`poid`, a.`dateordered`, b.datedelivered, a.`empname`, c.stckname, c.deliveryunit, b.qtyordered, b.qtydelivered, a.`status`, b.stksid, a.poid, d.supid, d.supname, c.equivalent FROM `purchase order` a INNER JOIN stckpurord b ON a.poid = b.poid INNER JOIN stocks c ON b.stksid = c.stckid INNER JOIN supplier d ON b.supid = d.supid WHERE MONTH(a.dateordered) = ? AND YEAR(a.dateordered) = ?");
+            ps.setString(1, month);
+            ps.setString(2, year);
+            ResultSet rs = ps.executeQuery();
+                while(rs.next()){
+                spo = new StckPurOrd(rs.getInt("stksid"), rs.getInt("supid"), rs.getInt("poid"), rs.getInt("qtyordered"));
+                spo.setDateordered(rs.getString("dateordered"));
+                spo.setDatedelivered(rs.getString("datedelivered"));
+                spo.setQtydelivered( rs.getInt("qtydelivered"));
+                spo.setStckname( rs.getString("stckname"));
+                spo.setEmpname( rs.getString("empname"));
+                spo.setSupname( rs.getString("supname"));
+                spo.setEquivalent( rs.getDouble("equivalent"));
+                spo.setDeliveryunit( rs.getString("deliveryunit"));
+                spo.setStatus(rs.getString("status"));
+                stckpurordlist.add(spo);
+            }
+            }catch(Exception e){
+            e.printStackTrace();
+        }
+        StckPurOrdList spoList = new StckPurOrdList(stckpurordlist);
+        return spoList;
+    }
+    
+    @POST
+    @Path("/stckpurordsyear")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.APPLICATION_JSON)
+    public StckPurOrdList stckPurOrdListYear(@FormParam("year") String year) {
+        ArrayList<StckPurOrd> stckpurordlist = new ArrayList<>();
+        StckPurOrd spo = new StckPurOrd();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("SELECT a.`poid`, a.`dateordered`, b.datedelivered, a.`empname`, c.stckname, c.deliveryunit, b.qtyordered, b.qtydelivered, a.`status`, b.stksid, a.poid, d.supid, d.supname, c.equivalent FROM `purchase order` a INNER JOIN stckpurord b ON a.poid = b.poid INNER JOIN stocks c ON b.stksid = c.stckid INNER JOIN supplier d ON b.supid = d.supid WHERE YEAR(a.dateordered) = ?");
+            ps.setString(1, year);
+            ResultSet rs = ps.executeQuery();
+                while(rs.next()){
+                spo = new StckPurOrd(rs.getInt("stksid"), rs.getInt("supid"), rs.getInt("poid"), rs.getInt("qtyordered"));
+                spo.setDateordered(rs.getString("dateordered"));
+                spo.setDatedelivered(rs.getString("datedelivered"));
+                spo.setQtydelivered( rs.getInt("qtydelivered"));
+                spo.setStckname( rs.getString("stckname"));
+                spo.setEmpname( rs.getString("empname"));
+                spo.setSupname( rs.getString("supname"));
+                spo.setEquivalent( rs.getDouble("equivalent"));
+                spo.setDeliveryunit( rs.getString("deliveryunit"));
+                spo.setStatus(rs.getString("status"));
+                stckpurordlist.add(spo);
+            }
+            }catch(Exception e){
+            e.printStackTrace();
+        }
+        StckPurOrdList spoList = new StckPurOrdList(stckpurordlist);
+        return spoList;
+    }
+    
+    @GET
     @Path("/purchaseOrders/{date}")
     @Produces(MediaType.APPLICATION_JSON)
     public PurchaseOrderList purchaseOrderListFromDate(@PathParam("date") String date) {
@@ -712,6 +1139,29 @@ public class InventoryService {
         PurchaseOrderList poList = new PurchaseOrderList(purchaseOrders);
         return poList;
     }      
+    
+    @GET
+    @Path("/purchaseOrdersret/{date}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public PurchaseOrderList purchaseOrderListRet(@PathParam("date") String date) {
+        ArrayList<PurchaseOrder> purchaseOrders = new ArrayList<>();
+        PurchaseOrder po = new PurchaseOrder();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM `purchase order` WHERE DATE(dateordered) = ? AND status NOT LIKE '%unreceived%'");
+            ps.setString(1, date);
+            ResultSet rs = ps.executeQuery();
+                while(rs.next()) {
+                    po = new PurchaseOrder(rs.getString("dateordered"), rs.getString("status"), rs.getString("empname"));
+                    po.setPoid(rs.getInt("poid"));
+                    purchaseOrders.add(po);
+                }
+            }catch(Exception e){
+            e.printStackTrace();
+        }
+        PurchaseOrderList poList = new PurchaseOrderList(purchaseOrders);
+        return poList;
+    }
     
     @POST
     @Path("/updateempinfo")
@@ -824,20 +1274,109 @@ public class InventoryService {
         return stock;
     }
     
-    //return an arraylist of all the stock in the database
     @GET
-    @Path("/stocks")
+    @Path("/stcksups/{stckid}")
     @Produces(MediaType.APPLICATION_JSON)
-    public StockList getStockListFromSupp() {
+    public StckSupList getStckSupList(@PathParam("stckid") int stckid) {
+        StckSup stcksup;
+        ArrayList<StckSup> sslist = new ArrayList<>();
+        StckSupList list = new StckSupList();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("SELECT a.suppid, a.stocksid ,b.supname  FROM stcksup a INNER JOIN supplier b ON a.suppid = b.supid WHERE a.stocksid = ?");
+            ps.setInt(1, stckid);
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                stcksup = new StckSup(rs.getInt("suppid"), rs.getInt("stocksid"));
+                stcksup.setSupname(rs.getString("supname"));
+                sslist.add(stcksup);
+            }
+            list = new StckSupList(sslist);
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+        return list;
+    }
+    
+    @GET
+    @Path("/stockdetails/{stckname}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Stock getStckDetails(@PathParam("stckname") String stckname) {
+        Stock stock = new Stock();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM stocks WHERE stckname = ?");
+            ps.setString(1, stckname);
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                stock = new Stock(rs.getString("stckname"), rs.getDouble("qty"), rs.getString("kitchenunit"), rs.getString("deliveryunit"), rs.getDouble("equivalent"), rs.getString("type"), rs.getInt("reorder point"), rs.getInt("reorder quantity"));
+                stock.setStckid(rs.getInt("stckid"));
+            }
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+        return stock;
+    }
+    
+    @GET
+    @Path("/stocklist/{order}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public StockList getStockList(@PathParam("order") String order){
         ArrayList<Stock> stocklist = new ArrayList<>();
         Connection conn = (Connection) context.getAttribute("conn");
+        PreparedStatement ps;
         try{
-            PreparedStatement ps = conn.prepareStatement("SELECT a.`stckid`, a.`stckname`, a.`qty`, a.`reorder point`, a.`reorder quantity`, a.`kitchenunit`, a.`deliveryunit`, a.`equivalent`, a.`type`, c.`supname` FROM `stocks` a RIGHT JOIN stcksup b ON a.stckid = b.stocksid RIGHT JOIN supplier c ON b.suppid = c.supid");
+            if(order.equals("DESC")){
+                ps = conn.prepareStatement("SELECT * FROM `stocks` ORDER BY stckname DESC");
+            }else{
+                ps = conn.prepareStatement("SELECT * FROM `stocks` ORDER BY stckname ASC");
+            }
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
                 Stock stock = new Stock(rs.getString("stckname"), rs.getDouble("qty"), rs.getString("kitchenunit"), rs.getString("deliveryunit"), rs.getDouble("equivalent"), rs.getString("type"), rs.getInt("reorder point"), rs.getInt("reorder quantity"));
                 stock.setStckid(rs.getInt("stckid"));
-                stock.setSupname(rs.getString("supname"));
+                stocklist.add(stock);
+            }
+        } catch(Exception e) {
+            System.out.println("Exception: " + e);
+        }
+        StockList slist = new StockList(stocklist);
+        return slist;
+    }
+    
+    @GET
+    @Path("/compounds")
+    @Produces(MediaType.APPLICATION_JSON)
+    public StockList getCompounds(){
+        ArrayList<Stock> stocklist = new ArrayList<>();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM `stocks` WHERE type = \"compound\" ORDER BY stckname ASC");
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                Stock stock = new Stock(rs.getString("stckname"), rs.getDouble("qty"), rs.getString("kitchenunit"), rs.getString("deliveryunit"), rs.getDouble("equivalent"), rs.getString("type"), rs.getInt("reorder point"), rs.getInt("reorder quantity"));
+                stock.setStckid(rs.getInt("stckid"));
+                stocklist.add(stock);
+            }
+        } catch(Exception e) {
+            System.out.println("Exception: " + e);
+        }
+        StockList slist = new StockList(stocklist);
+        return slist;
+    }
+    
+    @GET
+    @Path("/basic")
+    @Produces(MediaType.APPLICATION_JSON)
+    public StockList getBasics(){
+        ArrayList<Stock> stocklist = new ArrayList<>();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM `stocks` WHERE type = \"basic\" ORDER BY stckname ASC");
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                Stock stock = new Stock(rs.getString("stckname"), rs.getDouble("qty"), rs.getString("kitchenunit"), rs.getString("deliveryunit"), rs.getDouble("equivalent"), rs.getString("type"), rs.getInt("reorder point"), rs.getInt("reorder quantity"));
+                stock.setStckid(rs.getInt("stckid"));
                 stocklist.add(stock);
             }
         } catch(Exception e) {
@@ -859,7 +1398,9 @@ public class InventoryService {
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
                 p = new Product(rs.getString("prodname"), rs.getString("category"), rs.getDouble("price"));
+                p.setStatus(rs.getString("status"));
                 p.setId(rs.getInt("prodid"));
+                
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -942,12 +1483,14 @@ public class InventoryService {
         ArrayList<Stock> stocklist = new ArrayList<>();
         Connection conn = (Connection) context.getAttribute("conn");
         try{
-            PreparedStatement ps = conn.prepareStatement("SELECT a.`stckid`, a.`stckname`, a.`qty`, a.`reorder point`, a.`reorder quantity`, a.`kitchenunit`, a.`equivalent`, a.`deliveryunit`, a.`type`, b.suppid, c.supname  FROM `stocks` a INNER JOIN stcksup b ON a.stckid = b.stocksid INNER JOIN supplier c ON c.supid = b.suppid WHERE a.type = ?;");
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM `stocks` WHERE type = \"compound\"");
             ps.setString(1, type);
+            
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
                 Stock stock = new Stock(rs.getString("stckname"), rs.getDouble("qty"), rs.getString("kitchenunit"), rs.getString("deliveryunit"), rs.getDouble("equivalent"), rs.getString("type"), rs.getInt("reorder point"), rs.getInt("reorder quantity"));
                 stock.setStckid(rs.getInt("stckid"));
+                stock.setSupname(rs.getString("supname"));
                 stocklist.add(stock);
             }
         } catch(Exception e) {
@@ -955,6 +1498,43 @@ public class InventoryService {
         }
         StockList slist = new StockList(stocklist);
         return slist;
+    }
+    
+    
+    @GET
+    @Path("/kitchenunits")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String getKitchenUnits(){
+        String units = "";
+        Connection conn = (Connection) context.getAttribute("conn");
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT DISTINCT kitchenunit FROM stocks WHERE 1;");
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                units = units + rs.getString("kitchenunit") + ",";
+            }
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+        return units;
+    }
+    
+    @GET
+    @Path("/deliveryunits")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String getDeliveryUnits(){
+        String units = "";
+        Connection conn = (Connection) context.getAttribute("conn");
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT DISTINCT deliveryunit FROM stocks WHERE 1;");
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                units = units + rs.getString("deliveryunit") + ",";
+            }
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+        return units;
     }
     
     @GET
@@ -1002,257 +1582,5 @@ public class InventoryService {
                     e.printStackTrace();
         }
         return employee;
-    }
-    
-    @GET
-    @Path("/unit/{type}")
-    @Produces(MediaType.TEXT_PLAIN)
-    public String getStockUnits(@PathParam("type") String type){
-        String units = "";
-        Connection conn = (Connection) context.getAttribute("conn");
-        try{
-            PreparedStatement ps = conn.prepareStatement("SELECT DISTINCT ? FROM stocks WHERE 1;");
-            ps.setString(1, type);
-            ResultSet rs = ps.executeQuery();
-            while(rs.next()) {
-                units = rs.getString("kitchenunit") + ",";
-            }
-        } catch(Exception e) {
-            System.out.println("Exception: " + e);
-        }
-        return units;
-    }
-    
-    @GET
-    @Path("/kitchenunits")
-    @Produces(MediaType.APPLICATION_JSON)
-    public String getKitchenUnits(){
-        String units = "";
-        Connection conn = (Connection) context.getAttribute("conn");
-        try{
-            PreparedStatement ps = conn.prepareStatement("SELECT DISTINCT kitchenunit FROM stocks WHERE 1;");
-            ResultSet rs = ps.executeQuery();
-            while(rs.next()) {
-                units = units + rs.getString("kitchenunit") + ",";
-            }
-        } catch(Exception e) {
-            e.printStackTrace();
-        }
-        return units;
-    }
-    
-    @GET
-    @Path("/deliveryunits")
-    @Produces(MediaType.APPLICATION_JSON)
-    public String getDeliveryUnits(){
-        String units = "";
-        Connection conn = (Connection) context.getAttribute("conn");
-        try{
-            PreparedStatement ps = conn.prepareStatement("SELECT DISTINCT deliveryunit FROM stocks WHERE 1;");
-            ResultSet rs = ps.executeQuery();
-            while(rs.next()) {
-                units = units + rs.getString("deliveryunit") + ",";
-            }
-        } catch(Exception e) {
-            e.printStackTrace();
-        }
-        return units;
-    }
-
-    @POST
-    @Path("/addStckComp")
-    @Produces(MediaType.TEXT_PLAIN)
-    @Consumes(MediaType.APPLICATION_JSON)
-    public String addStckComp(StckCompound sc) {
-        String message = "Successfully added product";
-        Connection conn = (Connection) context.getAttribute("conn");
-        try {
-            PreparedStatement ps = conn.prepareStatement("INSERT INTO `stckcompound`(`stckidbasic`, `stckidcompound`, `qty`) VALUES (?, ?, ?)");
-            ps.setInt(1, sc.getStckidbasic());
-            ps.setInt(2, sc.getStckidcompound());
-            ps.setDouble(3, sc.getQty());
-            ps.executeUpdate();
-        } catch (Exception e) {
-            message = "failed";
-        }
-        return message;
-    }
-    
-    @POST
-    @Path("/adjuststckqty")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public String adjustStckQty(@FormParam("qty") double qty, @FormParam("stckname") String stckname) {
-        String status = "adjusted";
-        Connection conn = (Connection) context.getAttribute("conn");
-        try {
-            PreparedStatement ps = conn.prepareStatement("UPDATE stocks SET qty= ? WHERE stckname = ?");
-            ps.setDouble(1, qty);
-            ps.setString(2, stckname);
-            ps.executeUpdate();
-        } catch (Exception e) {
-            e.printStackTrace();
-            status = "failed";
-        }
-        return status;
-    }
-    
-    @POST
-    @Path("/adminlogin")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Employee adminLogin(@FormParam("name") String name,
-            @FormParam("password") String password,
-            @Context HttpServletResponse servletResponse) {
-        Employee e = new Employee();
-        Connection conn = (Connection) context.getAttribute("conn");
-        try {
-            PreparedStatement ps = conn.prepareStatement("SELECT * FROM employees WHERE username = ? AND password = ? AND position = 'Admin'");
-            ps.setString(1, name);
-            ps.setString(2, password);
-            ResultSet rs = ps.executeQuery();
-            if(rs.first()) {
-                e = new Employee(rs.getString("name"),rs.getString("address"), rs.getString("position"), rs.getString("contacts"), rs.getString("date hired"), rs.getString("status"));
-                e.setId(rs.getInt("empid"));
-            }else{
-                e.setId(-1);
-            }
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            e.setId(-2);
-        }
-        return e;
-    }
-    
-    @GET
-    @Path("/stockdetails/{stckname}")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Stock getStckDetails(@PathParam("stckname") String stckname) {
-        Stock stock = new Stock();
-        Connection conn = (Connection) context.getAttribute("conn");
-        try {
-            PreparedStatement ps = conn.prepareStatement("SELECT * FROM stocks WHERE stckname = ?");
-            ps.setString(1, stckname);
-            ResultSet rs = ps.executeQuery();
-            while(rs.next()) {
-                stock = new Stock(rs.getString("stckname"), rs.getDouble("qty"), rs.getString("kitchenunit"), rs.getString("deliveryunit"), rs.getDouble("equivalent"), rs.getString("type"), rs.getInt("reorder point"), rs.getInt("reorder quantity"));
-                stock.setStckid(rs.getInt("stckid"));
-            }
-            }catch(Exception e){
-                e.printStackTrace();
-            }
-        return stock;
-    }
-    
-    @POST
-    @Path("/addledgerrecord")
-    @Produces(MediaType.TEXT_PLAIN)
-    @Consumes(MediaType.APPLICATION_JSON)
-    public String addLedgerRecord(LedgerRecord lr) {
-        String message = "added";
-        Connection conn = (Connection) context.getAttribute("conn");
-        try {
-            PreparedStatement ps = conn.prepareStatement("INSERT INTO `ledger`(`date`, `qtyin`, `qtyout`, `qtybefore`, `qtyafter`, `reason`, `stckid`) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            ps.setString(1, lr.getDate());
-            ps.setDouble(2, lr.getQtyin());
-            ps.setDouble(3, lr.getQtyout());
-            ps.setDouble(4, lr.getQtybefore());
-            ps.setDouble(5, lr.getQtyafter());
-            ps.setString(6, lr.getReason());
-            ps.setDouble(7, lr.getStckid());
-            ps.executeUpdate();
-        } catch (Exception e) {
-            message = "error";
-            e.printStackTrace();
-        }
-        return message;
-    }
-    
-    @GET
-    @Path("/stckcompounds/{stckid}")
-    @Produces(MediaType.APPLICATION_JSON)
-    public StckCompoundList getStckcompounds(@PathParam("stckid") int stckid) {
-        ArrayList<StckCompound> sclist = new ArrayList<>();
-        Connection conn = (Connection) context.getAttribute("conn");
-        try{
-            PreparedStatement ps = conn.prepareStatement("SELECT a.`stckidcompound`, a.`qty`, b.stckid, b.stckname, b.kitchenunit FROM stckcompound a JOIN stocks b ON a.stckidbasic = b.stckid WHERE a.`stckidcompound` = ?");
-            ps.setInt(1, stckid );
-            ResultSet rs = ps.executeQuery();
-            while(rs.next()) {
-                StckCompound sc = new StckCompound(rs.getInt("stckid"), rs.getInt("stckidcompound"), rs.getDouble("qty"));
-                sc.setStckname(rs.getString("stckname"));
-                sc.setKitchenunit(rs.getString("kitchenunit"));
-                sclist.add(sc);
-            }
-        } catch(Exception e) {
-            e.printStackTrace();
-        }
-        StckCompoundList stckclist = new StckCompoundList(sclist);
-        return stckclist;
-    }
-
-
-    @GET
-    @Path("/compounds")
-    @Produces(MediaType.APPLICATION_JSON)
-    public StockList getCompounds(){
-        ArrayList<Stock> stocklist = new ArrayList<>();
-        Connection conn = (Connection) context.getAttribute("conn");
-        try{
-            PreparedStatement ps = conn.prepareStatement("SELECT * FROM `stocks` WHERE type = \"compound\"");
-            ResultSet rs = ps.executeQuery();
-            while(rs.next()) {
-                Stock stock = new Stock(rs.getString("stckname"), rs.getDouble("qty"), rs.getString("kitchenunit"), rs.getString("deliveryunit"), rs.getDouble("equivalent"), rs.getString("type"), rs.getInt("reorder point"), rs.getInt("reorder quantity"));
-                stock.setStckid(rs.getInt("stckid"));
-                stocklist.add(stock);
-            }
-        } catch(Exception e) {
-            System.out.println("Exception: " + e);
-        }
-        StockList slist = new StockList(stocklist);
-        return slist;
-    }
-    
-    @GET
-    @Path("/basic")
-    @Produces(MediaType.APPLICATION_JSON)
-    public StockList getBasics(){
-        ArrayList<Stock> stocklist = new ArrayList<>();
-        Connection conn = (Connection) context.getAttribute("conn");
-        try{
-            PreparedStatement ps = conn.prepareStatement("SELECT * FROM `stocks` WHERE type = 'basic' ORDER BY stckname ASC");
-            ResultSet rs = ps.executeQuery();
-            while(rs.next()) {
-                Stock stock = new Stock(rs.getString("stckname"), rs.getDouble("qty"), rs.getString("kitchenunit"), rs.getString("deliveryunit"), rs.getDouble("equivalent"), rs.getString("type"), rs.getInt("reorder point"), rs.getInt("reorder quantity"));
-                stock.setStckid(rs.getInt("stckid"));
-                stocklist.add(stock);
-            }
-        } catch(Exception e) {
-            System.out.println("Exception: " + e);
-        }
-        StockList slist = new StockList(stocklist);
-        return slist;
-    }
-
-
-@GET
-    @Path("/stocklist")
-    @Produces(MediaType.APPLICATION_JSON)
-    public StockList getStockList(){
-        ArrayList<Stock> stocklist = new ArrayList<>();
-        Connection conn = (Connection) context.getAttribute("conn");
-        try{
-            PreparedStatement ps = conn.prepareStatement("SELECT * FROM `stocks` ORDER BY stckname");
-            ResultSet rs = ps.executeQuery();
-            while(rs.next()) {
-                Stock stock = new Stock(rs.getString("stckname"), rs.getDouble("qty"), rs.getString("kitchenunit"), rs.getString("deliveryunit"), rs.getDouble("equivalent"), rs.getString("type"), rs.getInt("reorder point"), rs.getInt("reorder quantity"));
-                stock.setStckid(rs.getInt("stckid"));
-                stocklist.add(stock);
-            }
-        } catch(Exception e) {
-            System.out.println("Exception: " + e);
-        }
-        StockList slist = new StockList(stocklist);
-        return slist;
     }
 }

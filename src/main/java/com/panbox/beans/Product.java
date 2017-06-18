@@ -34,6 +34,8 @@ public class Product implements Serializable {
     private int empid;
     @XmlElement
     private boolean available;
+    @XmlElement
+    private String status;
 
     public Product() {
     }
@@ -100,5 +102,11 @@ public class Product implements Serializable {
         this.available = available;
     }
     
-    
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
 }
