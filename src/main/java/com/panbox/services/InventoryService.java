@@ -11,6 +11,8 @@ import com.panbox.beans.Prodstck;
 import com.panbox.beans.ProdstckList;
 import com.panbox.beans.PurchaseOrder;
 import com.panbox.beans.PurchaseOrderList;
+import com.panbox.beans.Rental;
+import com.panbox.beans.RentalList;
 import com.panbox.beans.StckCompound;
 import com.panbox.beans.StckCompoundList;
 import com.panbox.beans.StckPurOrd;
@@ -124,6 +126,32 @@ public class InventoryService {
                 e.setPassword(rs.getString("password"));
                 e.setStatus(rs.getString("status"));
                 list.add(e);
+            }
+                }catch(Exception e){
+                    e.printStackTrace();
+        }
+        EmployeeList elist = new EmployeeList(list);
+        return elist;
+    }
+    
+    @GET
+    @Path("/activeemployees")
+    @Produces(MediaType.APPLICATION_JSON)
+    public EmployeeList activeuserList() {
+        ArrayList<Employee> list = new ArrayList<>();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try {
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM employees");
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                if(rs.getString("status").equals("active")){
+                    Employee e = new Employee(rs.getString("name"), rs.getString("address"), rs.getString("position"), rs.getString("contacts"), rs.getString("date hired"), rs.getString("status")) ;
+                    e.setId(rs.getInt("empid"));
+                    e.setUsername(rs.getString("username"));
+                    e.setPassword(rs.getString("password"));
+                    e.setStatus(rs.getString("status"));
+                    list.add(e);
+                }
             }
                 }catch(Exception e){
                     e.printStackTrace();
@@ -684,6 +712,114 @@ public class InventoryService {
         }
         Ledger ledger = new Ledger(ledgerrecord);
         return ledger;
+    }
+    
+    @POST
+    @Path("/ledgerrecordfromdate")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Ledger getLedgerFromDate(@FormParam("stckid") int stckid, @FormParam("date") String date) {
+        ArrayList<LedgerRecord> ledgerrecord = new ArrayList<>();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT `ledgerid`, `stckid`, `orderid`, `poid`, `date`, `qtyin`, `qtyout`, `qtybefore`, `qtyafter`, `reason` FROM `ledger` WHERE `stckid` = ? AND DATE(date) = ? ORDER BY date DESC");
+            ps.setInt(1, stckid );
+            ps.setString(2, date );
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                LedgerRecord lr = new LedgerRecord( rs.getInt("stckid"), rs.getString("date"), rs.getDouble("qtybefore"), rs.getDouble("qtyafter"), rs.getString("reason") );
+                lr.setQtyin(rs.getDouble("qtyin"));
+                lr.setQtyout(rs.getDouble("qtyout"));
+                lr.setOrderid(rs.getInt("orderid"));
+                lr.setPoid(rs.getInt("poid"));
+                ledgerrecord.add(lr);
+            }
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+        Ledger ledger = new Ledger(ledgerrecord);
+        return ledger;
+    }
+    
+    @POST
+    @Path("/ledgerrecordbtwndate")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Ledger getLedgerBtwnDate(@FormParam("stckid") int stckid, @FormParam("datefrom") String datefrom, @FormParam("dateto") String dateto) {
+        ArrayList<LedgerRecord> ledgerrecord = new ArrayList<>();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT `ledgerid`, `stckid`, `orderid`, `poid`, `date`, `qtyin`, `qtyout`, `qtybefore`, `qtyafter`, `reason` FROM `ledger` WHERE `stckid` = ? AND DATE(date) BETWEEN ? AND ? ORDER BY date DESC");
+            ps.setInt(1, stckid );
+            ps.setString(2, datefrom );
+            ps.setString(3, dateto );
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                LedgerRecord lr = new LedgerRecord( rs.getInt("stckid"), rs.getString("date"), rs.getDouble("qtybefore"), rs.getDouble("qtyafter"), rs.getString("reason") );
+                lr.setQtyin(rs.getDouble("qtyin"));
+                lr.setQtyout(rs.getDouble("qtyout"));
+                lr.setOrderid(rs.getInt("orderid"));
+                lr.setPoid(rs.getInt("poid"));
+                ledgerrecord.add(lr);
+            }
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+        Ledger ledger = new Ledger(ledgerrecord);
+        return ledger;
+    }
+    
+    @POST
+    @Path("/rentalrecord")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public RentalList getRentalFromDate(@FormParam("date") String date) {
+        ArrayList<Rental> rentalrecord = new ArrayList<>();
+        Rental rental = new Rental();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM `rental` WHERE Date(date) = ?");
+            ps.setString(1, date );
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                rental.setCustName(rs.getString("custname"));
+                rental.setTimeIn(rs.getString("timein"));
+                rental.setTimeOut(rs.getString("timeout"));
+                rental.setDate(rs.getString("date"));
+                rentalrecord.add(rental);
+            }
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+        RentalList rl = new RentalList(rentalrecord);
+        return rl;
+    }
+    
+    @POST
+    @Path("/rentalrecordbtwndates")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public RentalList getRentalBtwnDate(@FormParam("datefrom") String datefrom, @FormParam("dateto") String dateto) {
+        ArrayList<Rental> rentalrecord = new ArrayList<>();
+        Rental rental = new Rental();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM `rental` WHERE Date(date) BETWEEN ? AND ?");
+            ps.setString(1, datefrom );
+            ps.setString(2, dateto );
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                rental.setCustName(rs.getString("custname"));
+                rental.setTimeIn(rs.getString("timein"));
+                rental.setTimeOut(rs.getString("timeout"));
+                rental.setDate(rs.getString("date"));
+                rentalrecord.add(rental);
+            }
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+        RentalList rl = new RentalList(rentalrecord);
+        return rl;
     }
     
     @GET
