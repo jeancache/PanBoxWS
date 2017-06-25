@@ -74,8 +74,9 @@ public class POSService {
         ArrayList<Product> list = new ArrayList<>();
         Connection conn = (Connection) context.getAttribute("conn");
         try {
-            PreparedStatement ps = conn.prepareStatement("SELECT * FROM products WHERE category = ? and status = 'active' ");
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM products WHERE category = ? and status = ? ");
             ps.setString(1, category);
+            ps.setString(2, "active");
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
                 Product p = new Product();
@@ -547,7 +548,7 @@ public class POSService {
             priceQuery.setString(1, prodname);
             ResultSet priceSet = priceQuery.executeQuery();
             if(priceSet.first()) {
-                price = priceSet.getDouble("price") + "";
+                price = new String().valueOf(priceSet.getDouble("price"));
             }
         } catch (Exception e) {
             price = "-1";
@@ -864,7 +865,10 @@ public class POSService {
         ArrayList<Product> list = new ArrayList<>();
         Connection conn = (Connection) context.getAttribute("conn");
         try {
-            PreparedStatement ps = conn.prepareStatement("SELECT * FROM products WHERE and status = 'active' ");
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM products WHERE status = ? AND category IN (?,?)");
+            ps.setString(1, "active");
+            ps.setString(2, "Food");
+            ps.setString(3, "Beverage");
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
                 Product p = new Product();
@@ -1068,4 +1072,23 @@ public class POSService {
         }
         return ret;
     }
+    
+//    @GET
+//    @Path("/prodprice/{pname}")
+//    @Produces(MediaType.TEXT_PLAIN)
+//    public double getProdPriceByName(@PathParam("pname") String pname) {
+//        double price = 0.0;
+//        Connection conn = (Connection) context.getAttribute("conn");
+//        try {
+//            PreparedStatement priceQuery = conn.prepareStatement("SELECT price FROM products WHERE prodname = ?");
+//            priceQuery.setString(1, pname);
+//            ResultSet priceRes = priceQuery.executeQuery();
+//            if(priceRes.first()) {
+//                price = priceRes.getDouble("price");
+//            }
+//        } catch (Exception e) {
+//            System.out.println("Exception[dailytotal]: " + e);
+//        }
+//        return price;
+//    }
 }
