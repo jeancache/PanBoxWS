@@ -61,7 +61,6 @@ public class ApplicationConfig extends Application {
         resources.add(com.panbox.services.InventoryService.class);
         resources.add(com.panbox.services.MoxyJsonConfigProvider.class);
         resources.add(com.panbox.services.POSService.class);
-        resources.add(org.glassfish.jersey.server.wadl.internal.WadlResource.class);
     }
     
 }
