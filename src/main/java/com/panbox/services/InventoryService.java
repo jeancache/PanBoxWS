@@ -775,13 +775,13 @@ public class InventoryService {
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public RentalList getRentalFromDate(@FormParam("date") String date) {
         ArrayList<Rental> rentalrecord = new ArrayList<>();
-        Rental rental = new Rental();
         Connection conn = (Connection) context.getAttribute("conn");
         try{
             PreparedStatement ps = conn.prepareStatement("SELECT * FROM `rental` WHERE Date(date) = ?");
             ps.setString(1, date );
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
+                Rental rental = new Rental();
                 rental.setCustName(rs.getString("custname"));
                 rental.setTimeIn(rs.getString("timein"));
                 rental.setTimeOut(rs.getString("timeout"));
@@ -1549,6 +1549,31 @@ public class InventoryService {
     @Path("/stocks/{supname}")
     @Produces(MediaType.APPLICATION_JSON)
     public StockList getStockListFromSupp(@PathParam("supname") String supname) {
+        ArrayList<Stock> stocklist = new ArrayList<>();
+        Connection conn = (Connection) context.getAttribute("conn");
+        try{
+            PreparedStatement ps = conn.prepareStatement("SELECT a.`stckid`, a.`stckname`, a.`qty`, a.`reorder point`, a.`reorder quantity`, a.`kitchenunit`, a.`equivalent`, a.`deliveryunit`, a.`type`, b.suppid, c.supname  FROM `stocks` a INNER JOIN stcksup b ON a.stckid = b.stocksid INNER JOIN supplier c ON c.supid = b.suppid WHERE c.supname = ?;");
+            ps.setString(1, supname);
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                Stock stock = new Stock(rs.getString("stckname"), rs.getDouble("qty"), rs.getString("kitchenunit"), rs.getString("deliveryunit"), rs.getDouble("equivalent"), rs.getString("type"), rs.getInt("reorder point"), rs.getInt("reorder quantity"));
+                stock.setStckid(rs.getInt("stckid"));
+                stock.setSupname(rs.getString("supname"));
+                stocklist.add(stock);
+            }
+        } catch(Exception e) {
+            System.out.println("Exception: " + e);
+        }
+        StockList slist = new StockList(stocklist);
+        return slist;
+    }
+    
+    //return an arraylist of stock the supplier provides
+    @POST
+    @Path("/stocksfromsupp")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public StockList getStockListFromSupps(@FormParam("supname") String supname) {
         ArrayList<Stock> stocklist = new ArrayList<>();
         Connection conn = (Connection) context.getAttribute("conn");
         try{
