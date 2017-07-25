@@ -372,6 +372,8 @@ public class POSService {
     public String voidItem(@FormParam("orderid") int orderid,
             @FormParam("itemname") String itemname) {
         Connection conn = (Connection) context.getAttribute("conn");
+        double newTotal = 0.0;
+        double newChange = 0.0;
         try {
             PreparedStatement countQuery = conn.prepareStatement("SELECT COUNT(prdid) AS 'count' FROM ordprod WHERE orid = ?");
             countQuery.setInt(1, orderid);
@@ -390,8 +392,33 @@ public class POSService {
                     if(totalRes.first()) {
                         PreparedStatement updateTotal = conn.prepareStatement("UPDATE orders SET total = ? WHERE ordid = ?");
                         updateTotal.setDouble(1, totalRes.getDouble("total"));
+                        newTotal = totalRes.getDouble("total");
                         updateTotal.setInt(2, orderid);
                         updateTotal.executeUpdate();
+                    }
+                    
+                    //recompute payment
+                    //check if order is associated with a sale
+                    //if yes, recompute payment
+                    PreparedStatement saleQuery = conn.prepareCall("SELECT salesid, discount FROM sales WHERE ordid = ?");
+                    saleQuery.setInt(1, orderid);
+                    ResultSet saleRes = saleQuery.executeQuery();
+                    if(saleRes.first()) {
+                        double discrate = (100 - saleRes.getDouble("discount")) / 100;
+                        
+                        newTotal = (newTotal * discrate);
+                        System.out.println(newTotal);
+                        PreparedStatement payQuery = conn.prepareStatement("SELECT payid, amount, changeamt FROM payment WHERE salesid = ?");
+                        payQuery.setInt(1, saleRes.getInt("salesid"));
+                        ResultSet payRes = payQuery.executeQuery();
+                        if(payRes.first()) {
+                            System.out.println(payRes.getDouble("changeamt"));
+                            newChange = payRes.getDouble("amount") - newTotal;
+                            System.out.println(newChange);
+                            PreparedStatement payNew = conn.prepareStatement("UPDATE payment SET changeamt = ?");
+                            payNew.setDouble(1, newChange);
+                            payNew.executeUpdate();
+                        }
                     }
                 } else {
                     //delete order
