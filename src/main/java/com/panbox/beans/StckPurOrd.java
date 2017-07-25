@@ -33,6 +33,10 @@ public class StckPurOrd implements Serializable {
     @XmlElement
     private int qtyremaining;
     @XmlElement
+    private double qtyequivalent;
+    @XmlElement
+    private String unit;
+    @XmlElement
     private String dateordered;
     @XmlElement
     private String datedelivered;
@@ -57,6 +61,22 @@ public class StckPurOrd implements Serializable {
         this.suppid = suppid;
         this.poid = poid;
         this.qtyordered = qtyordered;
+    }
+    
+    public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
+    }
+    
+    public double getQtyequivalent() {
+        return qtyequivalent;
+    }
+
+    public void setQtyequivalent(double qtyequivalent) {
+        this.qtyequivalent = qtyequivalent;
     }
     
     public String getDateordered() {

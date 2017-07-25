@@ -535,11 +535,13 @@ public class InventoryService {
     public StckPurOrd addStckPurord(StckPurOrd sp) {
         Connection conn = (Connection) context.getAttribute("conn");
         try {
-            PreparedStatement ps = conn.prepareStatement("INSERT INTO `stckpurord`(`stksid`, `poid`, `supid`, `qtyordered`) VALUES (?, ?, ?, ?)");
+            PreparedStatement ps = conn.prepareStatement("INSERT INTO `stckpurord`(`stksid`, `poid`, `supid`, `qtyordered`, `qtyequivalent`, `unit`) VALUES (?, ?, ?, ?, ?, ?)");
             ps.setInt(1, sp.getStksid());
             ps.setInt(2, sp.getPoid());
             ps.setInt(3, sp.getSuppid());
             ps.setInt(4, sp.getQtyordered());
+            ps.setDouble(5, sp.getQtyequivalent());
+            ps.setString(6, sp.getUnit());
             ps.executeUpdate();
         } catch (Exception e) {
             e.printStackTrace();
@@ -665,7 +667,7 @@ public class InventoryService {
         ArrayList<StckPurOrd> stckpurordlist = new ArrayList<>();
         Connection conn = (Connection) context.getAttribute("conn");
         try{
-            PreparedStatement ps = conn.prepareStatement("SELECT a.stksid, a.poid, a.supid, a.datedelivered, a.qtyordered, a.qtydelivered,a.status, a.qtyremaining, b.stckname, b.equivalent, b.deliveryunit, c.empname, d.supname  FROM stckpurord a INNER JOIN stocks b ON a.stksid = b.stckid INNER JOIN `purchase order` c ON a.poid = c.poid INNER JOIN supplier d ON a.supid = d.supid WHERE a.poid = ?");
+            PreparedStatement ps = conn.prepareStatement("SELECT a.stksid, a.poid, a.supid, a.datedelivered, a.qtyordered, a.qtydelivered, a.unit,a.status, a.qtyremaining, a.qtyequivalent, b.stckname, b.equivalent, b.deliveryunit, c.empname, d.supname  FROM stckpurord a INNER JOIN stocks b ON a.stksid = b.stckid INNER JOIN `purchase order` c ON a.poid = c.poid INNER JOIN supplier d ON a.supid = d.supid WHERE a.poid = ?");
             ps.setInt(1, poid );
             ResultSet rs = ps.executeQuery();
             while(rs.next()){
@@ -679,6 +681,8 @@ public class InventoryService {
                 spo.setDeliveryunit( rs.getString("deliveryunit"));
                 spo.setStatus(rs.getString("status"));
                 spo.setQtyremaining(rs.getInt("qtyremaining"));
+                spo.setUnit(rs.getString("unit"));
+                spo.setQtyequivalent(rs.getDouble("qtyequivalent"));
                 stckpurordlist.add(spo);
             }
         } catch(Exception e) {
